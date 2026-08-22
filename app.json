@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "Try Jesus: The Journey",
+    "slug": "try-jesus-the-journey",
+    "version": "0.2.0",
+    "orientation": "portrait",
+    "scheme": "tryjesusjourney",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#171418"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tryjesusmedia.journey"
+    },
+    "android": {
+      "package": "com.tryjesusmedia.journey",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#311E33"
+      },
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-web-browser",
+        {
+          "experimentalLauncherActivity": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "live-discussion"
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
