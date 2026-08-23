@@ -1,17 +1,26 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { Text, type ColorValue } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/theme';
 
-const Icon = ({ label, color }: { label: string; color: string }) => <Text style={{ color, fontSize: 18 }}>{label}</Text>;
+const Icon = ({ label, color }: { label: string; color: ColorValue }) => <Text style={{ color, fontSize: 18 }}>{label}</Text>;
 
 export default function TabsLayout() {
+  const { bottom } = useSafeAreaInsets();
+
   return (
     <Tabs screenOptions={{
       headerShown: false,
       tabBarActiveTintColor: colors.gold,
       tabBarInactiveTintColor: colors.muted,
-      tabBarStyle: { backgroundColor: '#191419', borderTopColor: colors.border, height: 70, paddingBottom: 10, paddingTop: 8 },
+      tabBarStyle: {
+        backgroundColor: '#191419',
+        borderTopColor: colors.border,
+        height: 70 + bottom,
+        paddingBottom: 10 + bottom,
+        paddingTop: 8,
+      },
       tabBarLabelStyle: { fontWeight: '700' },
     }}>
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: ({color}) => <Icon label="✦" color={color} /> }} />
