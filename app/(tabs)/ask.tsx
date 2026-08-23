@@ -29,9 +29,7 @@ const starters = [
 
 export default function AskPastorKalScreen() {
   const { session } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: 'welcome', role: 'assistant', text: "I'm Pastor Kal. Ask me any honest Bible question, and I'll give you a thoughtful answer rooted in Scripture. If you're curious about my sources, just ask me." },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -46,13 +44,9 @@ export default function AskPastorKalScreen() {
         .order('created_at', { ascending: true })
         .limit(40);
       if (data?.length) {
-        setMessages([
-          messages[0],
-          ...data.map((row: any) => ({ id: String(row.id), role: row.role, text: row.message, sources: row.sources ?? undefined })),
-        ]);
+        setMessages(data.map((row: any) => ({ id: String(row.id), role: row.role, text: row.message, sources: row.sources ?? undefined })));
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user.id]);
 
   async function saveMessage(message: ChatMessage) {
@@ -108,7 +102,7 @@ export default function AskPastorKalScreen() {
       <View style={styles.header}>
         <Text style={styles.eyebrow}>PRIVATE · WELCOMING</Text>
         <Text style={styles.title}>Ask Pastor Kal</Text>
-        <Text style={styles.subtitle}>Ask me any Bible question in a private, welcoming space.</Text>
+        <Text style={styles.subtitle}>Hi, I’m an AI chatbot based on the real Pastor Kal. I’ll thoughtfully answer your questions with Bible-based, Christ-centered guidance that reveals God’s heart.</Text>
       </View>
 
       <View style={styles.composer}>
@@ -136,7 +130,7 @@ export default function AskPastorKalScreen() {
         ))}
         {loading ? <View style={[styles.message, styles.assistantMessage, styles.loading]}><ActivityIndicator color={colors.gold} /><Text style={styles.messageText}>Kal is checking his notes...</Text></View> : null}
 
-        {messages.length <= 1 ? (
+        {messages.length === 0 ? (
           <View style={styles.starters}>
             <Text style={styles.starterTitle}>START WITH A QUESTION</Text>
             {starters.map((starter) => <Pressable key={starter} onPress={() => send(starter)} style={styles.starter}><Text style={styles.starterText}>{starter}</Text></Pressable>)}
