@@ -10,7 +10,7 @@ import { getGuestGuideProgress } from '@/lib/localStore';
 import { countdownParts, nextDiscussionDate, type LiveDiscussion } from '@/lib/liveDiscussion';
 import { scheduleDiscussionReminder } from '@/lib/notifications';
 
-type Video = { videoId: string; title: string; thumbnail?: string; channelTitle?: string; watchUrl: string };
+type Video = { videoId: string; title: string; thumbnail?: string; channelTitle?: string; watchUrl: string; durationSeconds?: number };
 type Product = { id: string; name: string; slug: string; images?: {url?: string; transformedUrl?: string}[]; variants?: {unitPrice?: {value?: number; currency?: string}}[]; storefrontUrl: string; pinned?: boolean };
 
 type Progress = { lesson_id?: string | null; progress_percent?: number | null; updated_at?: string | null };
@@ -32,7 +32,7 @@ function selectCarouselProducts(incoming: Product[]) {
 
 export default function HomeScreen() {
   const { session, guest } = useAuth();
-  const [video, setVideo] = useState<Video | null>(null);
+  const [videos, setVideos] = useState<Video[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [discussion, setDiscussion] = useState<LiveDiscussion | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
@@ -41,6 +41,9 @@ export default function HomeScreen() {
   const [productIndex, setProductIndex] = useState(0);
   const [carouselWidth, setCarouselWidth] = useState(0);
   const productCarousel = useRef<FlatList<Product>>(null);
+  const [videoIndex, setVideoIndex] = useState(0);
+  const [videoCarouselWidth, setVideoCarouselWidth] = useState(0);
+  const videoCarousel = useRef<FlatList<Video>>(null);
 
   const load = useCallback(async () => {
     const [videoResult, productsResult, discussionResult] = await Promise.all([
@@ -48,7 +51,11 @@ export default function HomeScreen() {
       supabase.functions.invoke('random-fourthwall-products', { body: {} }),
       supabase.from('live_discussions').select('*').eq('active', true).limit(1).maybeSingle(),
     ]);
-    if (videoResult.data && !videoResult.error) setVideo(videoResult.data as Video);
+    if (videoResult.data && !videoResult.error) {
+      const nextVideos = Array.isArray(videoResult.data.videos) ? videoResult.data.videos : [videoResult.data];
+      setVideos((nextVideos as Video[]).slice(0, 3));
+      setVideoIndex(0);
+    }
     if (productsResult.data?.products && !productsResult.error) {
       setProducts(selectCarouselProducts(productsResult.data.products as Product[]));
       setProductIndex(0);
@@ -80,6 +87,20 @@ export default function HomeScreen() {
     }, 1000);
     return () => clearInterval(timer);
   }, [carouselWidth, products.length]);
+  useEffect(() => {
+    videoCarousel.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [videos]);
+  useEffect(() => {
+    if (videos.length < 2 || videoCarouselWidth === 0) return;
+    const timer = setInterval(() => {
+      setVideoIndex((current) => {
+        const nextIndex = (current + 1) % videos.length;
+        videoCarousel.current?.scrollToOffset({ offset: nextIndex * videoCarouselWidth, animated: true });
+        return nextIndex;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [videoCarouselWidth, videos.length]);
 
   const next = useMemo(() => discussion ? nextDiscussionDate(discussion, now) : null, [discussion, now]);
   const cd = useMemo(() => next ? countdownParts(next, now) : null, [next, now]);
@@ -137,6 +158,36 @@ export default function HomeScreen() {
         </View>
       </View> : null}
 
+      {videos.length ? <View>
+        <Eyebrow>SOMETHING WORTH THINKING ABOUT</Eyebrow>
+        <Text style={styles.sectionTitle}>Long-form videos from Try Jesus Media.</Text>
+        <View onLayout={(event) => setVideoCarouselWidth(event.nativeEvent.layout.width)}>
+          <FlatList
+            ref={videoCarousel}
+            data={videos}
+            keyExtractor={(video) => video.videoId}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            scrollEnabled={videos.length > 1}
+            onMomentumScrollEnd={(event) => {
+              if (videoCarouselWidth) setVideoIndex(Math.round(event.nativeEvent.contentOffset.x / videoCarouselWidth));
+            }}
+            renderItem={({ item: video }) => <View style={{ width: videoCarouselWidth || undefined }}>
+              <Card style={styles.videoCard}>
+                {video.thumbnail ? <Image source={{uri: video.thumbnail}} style={styles.videoImage} /> : null}
+                <Text style={styles.sectionTitle}>{video.title}</Text>
+                <Text style={styles.meta}>{video.channelTitle ?? 'Try Jesus Media'}</Text>
+                <GoldButton title="Watch Now" onPress={() => Linking.openURL(video.watchUrl)} />
+              </Card>
+            </View>}
+          />
+        </View>
+        <View style={styles.carouselDots}>
+          {videos.map((video, index) => <View key={video.videoId} style={[styles.carouselDot, videoIndex === index && styles.carouselDotActive]} />)}
+        </View>
+      </View> : null}
+
       <Card style={styles.askCard}>
         <Eyebrow>ASK WITHOUT EMBARRASSMENT</Eyebrow>
         <Text style={styles.sectionTitle}>Ask Pastor Kal</Text>
@@ -155,14 +206,6 @@ export default function HomeScreen() {
         ])} /></View>
       </Card> : null}
 
-      {video ? <Card>
-        <Eyebrow>SOMETHING WORTH THINKING ABOUT</Eyebrow>
-        {video.thumbnail ? <Image source={{uri: video.thumbnail}} style={styles.videoImage} /> : null}
-        <Text style={styles.sectionTitle}>{video.title}</Text>
-        <Text style={styles.meta}>{video.channelTitle ?? 'Try Jesus Media'}</Text>
-        <View style={styles.row}><GoldButton title="Watch Now" onPress={() => Linking.openURL(video.watchUrl)} /><OutlineButton title="Choose Another" onPress={async () => { const r = await supabase.functions.invoke('random-youtube-video', {body:{}}); if (r.data) setVideo(r.data as Video); }} /></View>
-      </Card> : null}
-
       <View style={{height: 24}} />
     </ScrollView>
   );
@@ -173,5 +216,5 @@ const styles = StyleSheet.create({
   header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:4},brand:{color:colors.ivory,fontWeight:'900',fontSize:20,letterSpacing:.5},media:{color:colors.gold,fontWeight:'800',fontSize:11,letterSpacing:2.2},mark:{width:56,height:56},
   hero:{backgroundColor:colors.plum,padding:24},askCard:{backgroundColor:colors.panel2},heroTitle:{color:colors.text,fontSize:30,fontWeight:'800',lineHeight:36,marginBottom:10},body:{color:colors.ivory,fontSize:15,lineHeight:23,marginBottom:18},sectionTitle:{color:colors.text,fontSize:21,fontWeight:'800',lineHeight:27,marginBottom:8},meta:{color:colors.muted,fontSize:13,marginBottom:14},
   countdown:{flexDirection:'row',gap:8,marginVertical:16},timeBox:{flex:1,backgroundColor:colors.panel2,borderRadius:14,paddingVertical:12,alignItems:'center'},timeNum:{color:colors.gold,fontSize:24,fontWeight:'900'},timeLabel:{color:colors.muted,fontSize:9,letterSpacing:1.5,fontWeight:'800'},
-  row:{gap:10,marginTop:10},videoImage:{width:'100%',aspectRatio:16/9,borderRadius:16,marginBottom:14,backgroundColor:colors.plum},productCard:{padding:14},productImage:{width:'100%',aspectRatio:1.6,borderRadius:14,backgroundColor:colors.plum,marginBottom:12},pin:{color:colors.gold,fontSize:10,fontWeight:'900',letterSpacing:1.4,marginBottom:5},productName:{color:colors.text,fontSize:17,fontWeight:'800',marginBottom:5},carouselDots:{flexDirection:'row',justifyContent:'center',gap:7,marginTop:10},carouselDot:{width:7,height:7,borderRadius:4,backgroundColor:colors.border},carouselDotActive:{width:18,backgroundColor:colors.gold}
+  row:{gap:10,marginTop:10},videoCard:{padding:14},videoImage:{width:'100%',aspectRatio:16/9,borderRadius:16,marginBottom:14,backgroundColor:colors.plum},productCard:{padding:14},productImage:{width:'100%',aspectRatio:1.6,borderRadius:14,backgroundColor:colors.plum,marginBottom:12},pin:{color:colors.gold,fontSize:10,fontWeight:'900',letterSpacing:1.4,marginBottom:5},productName:{color:colors.text,fontSize:17,fontWeight:'800',marginBottom:5},carouselDots:{flexDirection:'row',justifyContent:'center',gap:7,marginTop:10},carouselDot:{width:7,height:7,borderRadius:4,backgroundColor:colors.border},carouselDotActive:{width:18,backgroundColor:colors.gold}
 });
