@@ -24,7 +24,8 @@ export default function TabsLayout() {
       tabBarLabelStyle: { fontWeight: '700' },
     }}>
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: ({color}) => <Icon label="✦" color={color} /> }} />
-      <Tabs.Screen name="journey" options={{ title: 'Guides', tabBarIcon: ({color}) => <Icon label="▣" color={color} /> }} />
+      <Tabs.Screen name="bible" options={{ title: 'Bible', tabBarIcon: ({color}) => <Icon label="▣" color={color} /> }} />
+      <Tabs.Screen name="journey" options={{ href: null }} />
       <Tabs.Screen name="journal" options={{ title: 'Journal', tabBarIcon: ({color}) => <Icon label="✎" color={color} /> }} />
       <Tabs.Screen name="ask" options={{ title: 'Ask Kal', tabBarIcon: ({color}) => <Icon label="?" color={color} /> }} />
       <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: ({color}) => <Icon label="•••" color={color} /> }} />
