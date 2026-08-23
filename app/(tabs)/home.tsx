@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Image, Linking, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, FlatList, Image, Linking, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { colors } from '@/constants/theme';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
@@ -14,6 +14,21 @@ type Product = { id: string; name: string; slug: string; images?: {url?: string;
 
 type Progress = { lesson_id?: string | null; progress_percent?: number | null };
 
+function selectCarouselProducts(incoming: Product[]) {
+  const bibleDecoded = incoming.find((product) => /bible[\s-]*decoded/i.test(`${product.name} ${product.slug}`))
+    ?? incoming.find((product) => product.pinned);
+  const otherProducts = incoming.filter((product) => product !== bibleDecoded);
+
+  for (let index = otherProducts.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [otherProducts[index], otherProducts[randomIndex]] = [otherProducts[randomIndex], otherProducts[index]];
+  }
+
+  return bibleDecoded
+    ? [bibleDecoded, ...otherProducts.slice(0, 2)]
+    : incoming.slice(0, 3);
+}
+
 export default function HomeScreen() {
   const { session, guest } = useAuth();
   const [video, setVideo] = useState<Video | null>(null);
@@ -22,6 +37,9 @@ export default function HomeScreen() {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [productIndex, setProductIndex] = useState(0);
+  const [carouselWidth, setCarouselWidth] = useState(0);
+  const productCarousel = useRef<FlatList<Product>>(null);
 
   const load = useCallback(async () => {
     const [videoResult, productsResult, discussionResult] = await Promise.all([
@@ -30,7 +48,10 @@ export default function HomeScreen() {
       supabase.from('live_discussions').select('*').eq('active', true).limit(1).maybeSingle(),
     ]);
     if (videoResult.data && !videoResult.error) setVideo(videoResult.data as Video);
-    if (productsResult.data?.products && !productsResult.error) setProducts(productsResult.data.products as Product[]);
+    if (productsResult.data?.products && !productsResult.error) {
+      setProducts(selectCarouselProducts(productsResult.data.products as Product[]));
+      setProductIndex(0);
+    }
     if (discussionResult.data) setDiscussion(discussionResult.data as LiveDiscussion);
     if (session) {
       const p = await supabase.from('guide_progress').select('lesson_id,progress_percent').eq('guide_id', 'main-bible-journey').maybeSingle();
@@ -43,6 +64,20 @@ export default function HomeScreen() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => {
+    productCarousel.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [products]);
+  useEffect(() => {
+    if (products.length < 2 || carouselWidth === 0) return;
+    const timer = setInterval(() => {
+      setProductIndex((current) => {
+        const nextIndex = (current + 1) % products.length;
+        productCarousel.current?.scrollToOffset({ offset: nextIndex * carouselWidth, animated: true });
+        return nextIndex;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [carouselWidth, products.length]);
 
   const next = useMemo(() => discussion ? nextDiscussionDate(discussion, now) : null, [discussion, now]);
   const cd = useMemo(() => next ? countdownParts(next, now) : null, [next, now]);
@@ -64,6 +99,41 @@ export default function HomeScreen() {
         <Text style={styles.body}>{progress ? `${Math.round(progress.progress_percent ?? 0)}% through your current guide. Your place is saved.` : 'Explore the Bible privately, ask honest questions, and follow the evidence wherever it leads.'}</Text>
         <GoldButton title={progress ? 'Continue My Bible Guide' : 'Begin My Bible Guides'} onPress={() => router.push('/(tabs)/journey')} />
       </Card>
+
+      {products.length ? <View>
+        <Eyebrow>CONTINUE YOUR JOURNEY</Eyebrow>
+        <Text style={styles.sectionTitle}>Programs & resources selected for you.</Text>
+        <View onLayout={(event) => setCarouselWidth(event.nativeEvent.layout.width)}>
+          <FlatList
+            ref={productCarousel}
+            data={products}
+            keyExtractor={(product) => product.id ?? product.slug}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            scrollEnabled={products.length > 1}
+            onMomentumScrollEnd={(event) => {
+              if (carouselWidth) setProductIndex(Math.round(event.nativeEvent.contentOffset.x / carouselWidth));
+            }}
+            renderItem={({ item: product, index }) => {
+              const image = product.images?.[0]?.transformedUrl ?? product.images?.[0]?.url;
+              const price = product.variants?.[0]?.unitPrice;
+              return <View style={{ width: carouselWidth || undefined }}>
+                <Card style={styles.productCard}>
+                  {image ? <Image source={{uri: image}} style={styles.productImage} /> : null}
+                  <Text style={styles.pin}>{index === 0 ? 'FEATURED PROGRAM' : 'RESOURCE'}</Text>
+                  <Text style={styles.productName}>{product.name}</Text>
+                  {price?.value != null ? <Text style={styles.meta}>{price.currency ?? 'USD'} ${Number(price.value).toFixed(2)}</Text> : null}
+                  <OutlineButton title="View on Fourthwall" onPress={() => Linking.openURL(product.storefrontUrl)} />
+                </Card>
+              </View>;
+            }}
+          />
+        </View>
+        <View style={styles.carouselDots}>
+          {products.map((product, index) => <View key={product.id ?? product.slug} style={[styles.carouselDot, productIndex === index && styles.carouselDotActive]} />)}
+        </View>
+      </View> : null}
 
       <Card style={styles.askCard}>
         <Eyebrow>ASK WITHOUT EMBARRASSMENT</Eyebrow>
@@ -91,21 +161,6 @@ export default function HomeScreen() {
         <View style={styles.row}><GoldButton title="Watch Now" onPress={() => Linking.openURL(video.watchUrl)} /><OutlineButton title="Choose Another" onPress={async () => { const r = await supabase.functions.invoke('random-youtube-video', {body:{}}); if (r.data) setVideo(r.data as Video); }} /></View>
       </Card> : null}
 
-      {products.length ? <View>
-        <Eyebrow>CONTINUE YOUR JOURNEY</Eyebrow>
-        <Text style={styles.sectionTitle}>Programs & resources selected for you.</Text>
-        <View style={styles.productList}>{products.slice(0,3).map((p, i) => {
-          const img = p.images?.[0]?.transformedUrl ?? p.images?.[0]?.url;
-          const price = p.variants?.[0]?.unitPrice;
-          return <Card key={p.id ?? p.slug} style={styles.productCard}>
-            {img ? <Image source={{uri: img}} style={styles.productImage} /> : null}
-            <Text style={styles.pin}>{i === 0 || p.pinned ? 'FEATURED PROGRAM' : 'RESOURCE'}</Text>
-            <Text style={styles.productName}>{p.name}</Text>
-            {price?.value != null ? <Text style={styles.meta}>{price.currency ?? 'USD'} ${Number(price.value).toFixed(2)}</Text> : null}
-            <OutlineButton title="View on Fourthwall" onPress={() => Linking.openURL(p.storefrontUrl)} />
-          </Card>;
-        })}</View>
-      </View> : null}
       <View style={{height: 24}} />
     </ScrollView>
   );
@@ -116,5 +171,5 @@ const styles = StyleSheet.create({
   header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:4},brand:{color:colors.ivory,fontWeight:'900',fontSize:20,letterSpacing:.5},media:{color:colors.gold,fontWeight:'800',fontSize:11,letterSpacing:2.2},mark:{width:56,height:56},
   hero:{backgroundColor:colors.plum,padding:24},askCard:{backgroundColor:colors.panel2},heroTitle:{color:colors.text,fontSize:30,fontWeight:'800',lineHeight:36,marginBottom:10},body:{color:colors.ivory,fontSize:15,lineHeight:23,marginBottom:18},sectionTitle:{color:colors.text,fontSize:21,fontWeight:'800',lineHeight:27,marginBottom:8},meta:{color:colors.muted,fontSize:13,marginBottom:14},
   countdown:{flexDirection:'row',gap:8,marginVertical:16},timeBox:{flex:1,backgroundColor:colors.panel2,borderRadius:14,paddingVertical:12,alignItems:'center'},timeNum:{color:colors.gold,fontSize:24,fontWeight:'900'},timeLabel:{color:colors.muted,fontSize:9,letterSpacing:1.5,fontWeight:'800'},
-  row:{gap:10,marginTop:10},videoImage:{width:'100%',aspectRatio:16/9,borderRadius:16,marginBottom:14,backgroundColor:colors.plum},productList:{gap:12,marginTop:12},productCard:{padding:14},productImage:{width:'100%',aspectRatio:1.6,borderRadius:14,backgroundColor:colors.plum,marginBottom:12},pin:{color:colors.gold,fontSize:10,fontWeight:'900',letterSpacing:1.4,marginBottom:5},productName:{color:colors.text,fontSize:17,fontWeight:'800',marginBottom:5}
+  row:{gap:10,marginTop:10},videoImage:{width:'100%',aspectRatio:16/9,borderRadius:16,marginBottom:14,backgroundColor:colors.plum},productCard:{padding:14},productImage:{width:'100%',aspectRatio:1.6,borderRadius:14,backgroundColor:colors.plum,marginBottom:12},pin:{color:colors.gold,fontSize:10,fontWeight:'900',letterSpacing:1.4,marginBottom:5},productName:{color:colors.text,fontSize:17,fontWeight:'800',marginBottom:5},carouselDots:{flexDirection:'row',justifyContent:'center',gap:7,marginTop:10},carouselDot:{width:7,height:7,borderRadius:4,backgroundColor:colors.border},carouselDotActive:{width:18,backgroundColor:colors.gold}
 });
