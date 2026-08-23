@@ -14,13 +14,13 @@ export default function LoginScreen() {
       setBusy(provider);
       const fn = provider === 'google' ? auth.signInGoogle : provider === 'facebook' ? auth.signInFacebook : auth.signInApple;
       const ok = await fn();
-      if (ok) router.replace('/(tabs)/journey');
+      if (ok) router.replace('/(tabs)/home');
     } catch (e) {
       Alert.alert('Sign in did not finish', e instanceof Error ? e.message : 'Please try again.');
     } finally { setBusy(null); }
   }
 
-  async function guest() { await auth.continueAsGuest(); router.replace('/(tabs)/journey'); }
+  async function guest() { await auth.continueAsGuest(); router.replace('/(tabs)/home'); }
 
   return (
     <ScrollView contentContainerStyle={styles.page}>

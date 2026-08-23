@@ -23,15 +23,15 @@ export default function TabsLayout() {
       },
       tabBarLabelStyle: { fontWeight: '700' },
     }}>
-      <Tabs.Screen name="journey" options={{ title: 'Guides', tabBarIcon: ({color}) => <Icon label="▣" color={color} /> }} />
-      <Tabs.Screen name="programs" options={{ title: 'Journey', tabBarIcon: ({color}) => <Icon label="◆" color={color} /> }} />
-      <Tabs.Screen name="videos" options={{ title: 'Videos', tabBarIcon: ({color}) => <Icon label="▶" color={color} /> }} />
+      <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: ({color}) => <Icon label="✦" color={color} /> }} />
+      <Tabs.Screen name="bible" options={{ title: 'Bible', tabBarIcon: ({color}) => <Icon label="▣" color={color} /> }} />
+      <Tabs.Screen name="ask" options={{ title: 'Ask Kal', tabBarIcon: ({color}) => <Icon label="?" color={color} /> }} />
       <Tabs.Screen name="live" options={{ title: 'Live', tabBarIcon: ({color}) => <Icon label="◉" color={color} /> }} />
       <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: ({color}) => <Icon label="•••" color={color} /> }} />
-      <Tabs.Screen name="home" options={{ href: null }} />
-      <Tabs.Screen name="bible" options={{ href: null }} />
+      <Tabs.Screen name="journey" options={{ href: null }} />
+      <Tabs.Screen name="programs" options={{ href: null }} />
+      <Tabs.Screen name="videos" options={{ href: null }} />
       <Tabs.Screen name="journal" options={{ href: null }} />
-      <Tabs.Screen name="ask" options={{ href: null }} />
     </Tabs>
   );
 }
