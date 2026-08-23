@@ -1,0 +1,83 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { WebView } from 'react-native-webview';
+import { colors } from '@/constants/theme';
+import { getBibleGuideSet, guideNumberFromUrl, guideUrl } from '@/data/bibleGuides';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { getGuestGuideProgress, saveGuestGuideProgress } from '@/lib/localStore';
+
+export default function GuideReaderScreen() {
+  const params = useLocalSearchParams<{ set?: string }>();
+  const guideSet = getBibleGuideSet(params.set);
+  const { session, guest } = useAuth();
+  const [url, setUrl] = useState(guideUrl(guideSet));
+  const [savedPercent, setSavedPercent] = useState(0);
+  const [ready, setReady] = useState(false);
+  const lastSaved = useRef(0);
+  const webRef = useRef<WebView>(null);
+  const restored = useRef(false);
+
+  useEffect(() => {
+    (async () => {
+      if (session) {
+        const result = await supabase.from('guide_progress').select('lesson_id,progress_percent').eq('guide_id', guideSet.id).maybeSingle();
+        if (result.data?.lesson_id) setUrl(result.data.lesson_id);
+        setSavedPercent(result.data?.progress_percent ?? 0);
+      } else if (guest) {
+        const progress = await getGuestGuideProgress(guideSet.id);
+        if (progress?.lessonUrl) setUrl(progress.lessonUrl);
+        setSavedPercent(progress?.progressPercent ?? 0);
+      }
+      setReady(true);
+    })();
+  }, [guest, guideSet.id, session]);
+
+  async function persist(nextUrl: string, percent: number) {
+    if (Date.now() - lastSaved.current < 1200) return;
+    lastSaved.current = Date.now();
+    const bounded = Math.max(0, Math.min(100, Math.round(percent)));
+    if (session) {
+      const { error } = await supabase.from('guide_progress').upsert({ user_id: session.user.id, guide_id: guideSet.id, lesson_id: nextUrl, progress_percent: bounded, completed: guideNumberFromUrl(guideSet, nextUrl) === guideSet.guideCount && bounded >= 99, updated_at: new Date().toISOString() }, { onConflict: 'user_id,guide_id' });
+      if (error) console.warn(error.message);
+    } else if (guest) {
+      await saveGuestGuideProgress(guideSet.id, { lessonUrl: nextUrl, progressPercent: bounded, updatedAt: new Date().toISOString() });
+    }
+  }
+
+  if (!ready) return <View style={styles.center}><Text style={styles.text}>Opening your saved place…</Text></View>;
+
+  return <View style={styles.page}>
+    <View style={styles.header}>
+      <Pressable onPress={() => router.back()}><Text style={styles.back}>‹ Bible Guides</Text></Pressable>
+      <View style={styles.headerCopy}><Text style={styles.title}>{guideSet.title}</Text><Text style={styles.guideNumber}>Guide {guideNumberFromUrl(guideSet, url)} of {guideSet.guideCount}</Text></View>
+    </View>
+    <WebView
+      ref={webRef}
+      source={{ uri: url }}
+      style={styles.web}
+      onNavigationStateChange={(navigation) => {
+        if (navigation.url !== url) { restored.current = false; setSavedPercent(0); }
+        setUrl(navigation.url);
+        persist(navigation.url, navigation.url === url ? savedPercent : 0);
+      }}
+      onScroll={(event) => {
+        const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+        persist(url, (contentOffset.y / Math.max(1, contentSize.height - layoutMeasurement.height)) * 100);
+      }}
+      onLoadEnd={() => {
+        if (!restored.current && savedPercent > 1) {
+          restored.current = true;
+          const fraction = Math.max(0, Math.min(1, savedPercent / 100));
+          webRef.current?.injectJavaScript(`(function(){var h=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);window.scrollTo(0,Math.max(0,h*${fraction}));true;})();`);
+        }
+      }}
+      onError={() => Alert.alert('Guide unavailable', 'Check your internet connection and try again.')}
+    />
+  </View>;
+}
+
+const styles = StyleSheet.create({
+  page:{flex:1,backgroundColor:colors.charcoal,paddingTop:46},header:{paddingHorizontal:18,paddingBottom:12},back:{color:colors.gold,fontSize:15,fontWeight:'900',marginBottom:9},headerCopy:{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:12},title:{color:colors.text,fontSize:22,fontWeight:'900',flex:1},guideNumber:{color:colors.muted,fontSize:12,fontWeight:'800'},web:{flex:1,backgroundColor:colors.ivory},center:{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:colors.charcoal},text:{color:colors.ivory},
+});

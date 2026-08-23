@@ -5,14 +5,15 @@ import { colors } from '@/constants/theme';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { getGuestProgress } from '@/lib/localStore';
+import { bibleGuideSets } from '@/data/bibleGuides';
+import { getGuestGuideProgress } from '@/lib/localStore';
 import { countdownParts, nextDiscussionDate, type LiveDiscussion } from '@/lib/liveDiscussion';
 import { scheduleDiscussionReminder } from '@/lib/notifications';
 
 type Video = { videoId: string; title: string; thumbnail?: string; channelTitle?: string; watchUrl: string };
 type Product = { id: string; name: string; slug: string; images?: {url?: string; transformedUrl?: string}[]; variants?: {unitPrice?: {value?: number; currency?: string}}[]; storefrontUrl: string; pinned?: boolean };
 
-type Progress = { lesson_id?: string | null; progress_percent?: number | null };
+type Progress = { lesson_id?: string | null; progress_percent?: number | null; updated_at?: string | null };
 
 function selectCarouselProducts(incoming: Product[]) {
   const bibleDecoded = incoming.find((product) => /bible[\s-]*decoded/i.test(`${product.name} ${product.slug}`))
@@ -54,11 +55,12 @@ export default function HomeScreen() {
     }
     if (discussionResult.data) setDiscussion(discussionResult.data as LiveDiscussion);
     if (session) {
-      const p = await supabase.from('guide_progress').select('lesson_id,progress_percent').eq('guide_id', 'main-bible-journey').maybeSingle();
-      setProgress(p.data ?? null);
+      const result = await supabase.from('guide_progress').select('lesson_id,progress_percent,updated_at').in('guide_id', bibleGuideSets.map((guideSet) => guideSet.id)).order('updated_at', { ascending: false }).limit(1).maybeSingle();
+      setProgress(result.data ?? null);
     } else if (guest) {
-      const p = await getGuestProgress();
-      setProgress(p ? { lesson_id: p.lessonUrl, progress_percent: p.progressPercent } : null);
+      const savedGuides = (await Promise.all(bibleGuideSets.map((guideSet) => getGuestGuideProgress(guideSet.id)))).filter((item) => item != null).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      const latest = savedGuides[0];
+      setProgress(latest ? { lesson_id: latest.lessonUrl, progress_percent: latest.progressPercent, updated_at: latest.updatedAt } : null);
     }
   }, [session, guest]);
 
@@ -97,7 +99,7 @@ export default function HomeScreen() {
         <Eyebrow>{progress ? 'CONTINUE YOUR JOURNEY' : 'BEGIN YOUR JOURNEY'}</Eyebrow>
         <Text style={styles.heroTitle}>{progress ? 'Pick up where you left off.' : 'Your next discovery is waiting.'}</Text>
         <Text style={styles.body}>{progress ? `${Math.round(progress.progress_percent ?? 0)}% through your current guide. Your place is saved.` : 'Explore the Bible privately, ask honest questions, and follow the evidence wherever it leads.'}</Text>
-        <GoldButton title={progress ? 'Continue My Bible Guide' : 'Begin My Bible Guides'} onPress={() => router.push('/(tabs)/journey')} />
+        <GoldButton title={progress ? 'Continue My Bible Guides' : 'Begin My Bible Guides'} onPress={() => router.push('/(tabs)/journey')} />
       </Card>
 
       {products.length ? <View>
