@@ -4,8 +4,6 @@ import { colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 
-const WELCOME_URL = 'https://tryjesusmedia.com/welcome/';
-
 type Source = {
   id?: string | number;
   category?: string;
@@ -113,6 +111,22 @@ export default function AskPastorKalScreen() {
         <Text style={styles.subtitle}>Bible answers grounded in Pastor Kal's organized Try Jesus Media knowledge base—not free-form theological guessing.</Text>
       </View>
 
+      <View style={styles.composer}>
+        <TextInput
+          value={input}
+          onChangeText={setInput}
+          placeholder="Ask a Bible question…"
+          placeholderTextColor={colors.muted}
+          multiline
+          style={styles.input}
+          maxLength={1200}
+          onSubmitEditing={() => send()}
+        />
+        <Pressable disabled={loading || !input.trim()} onPress={() => send()} style={[styles.send, (loading || !input.trim()) && styles.sendDisabled]}>
+          <Text style={styles.sendText}>Ask</Text>
+        </Pressable>
+      </View>
+
       <ScrollView ref={scrollRef} style={styles.chat} contentContainerStyle={styles.chatContent} onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
         {messages.map((message) => (
           <View key={message.id} style={[styles.message, message.role === 'user' ? styles.userMessage : styles.assistantMessage]}>
@@ -143,33 +157,11 @@ export default function AskPastorKalScreen() {
           </View>
         ) : null}
 
-        <View style={styles.liveCard}>
-          <Text style={styles.liveEyebrow}>THURSDAY · 8 PM EASTERN</Text>
-          <Text style={styles.liveTitle}>Want to ask the question live?</Text>
-          <Text style={styles.liveCopy}>Join the weekly discussion, listen quietly, or bring the question the AI could not settle for you.</Text>
-          <Pressable onPress={() => Linking.openURL(WELCOME_URL)} style={styles.liveButton}><Text style={styles.liveButtonText}>Join the Thursday Discussion</Text></Pressable>
-        </View>
-
         <View style={styles.aiNotice}>
           <Text style={styles.aiNoticeText}>This Pastor Kal is an AI chatbot. If you want to contact the real Pastor Kal, text him at 816-259-6486.</Text>
         </View>
       </ScrollView>
 
-      <View style={styles.composer}>
-        <TextInput
-          value={input}
-          onChangeText={setInput}
-          placeholder="Ask a Bible question…"
-          placeholderTextColor={colors.muted}
-          multiline
-          style={styles.input}
-          maxLength={1200}
-          onSubmitEditing={() => send()}
-        />
-        <Pressable disabled={loading || !input.trim()} onPress={() => send()} style={[styles.send, (loading || !input.trim()) && styles.sendDisabled]}>
-          <Text style={styles.sendText}>Ask</Text>
-        </Pressable>
-      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -179,7 +171,6 @@ const styles = StyleSheet.create({
   chat:{flex:1},chatContent:{padding:16,gap:12,paddingBottom:28},message:{borderRadius:20,padding:16,borderWidth:1},assistantMessage:{backgroundColor:colors.panel,borderColor:colors.border,marginRight:28},userMessage:{backgroundColor:colors.plum,borderColor:'rgba(255,255,255,.12)',marginLeft:28},role:{color:colors.gold,fontSize:9,fontWeight:'900',letterSpacing:1.4,marginBottom:6},messageText:{color:colors.text,fontSize:15,lineHeight:23},loading:{flexDirection:'row',gap:10,alignItems:'center'},
   sources:{marginTop:14,paddingTop:11,borderTopWidth:1,borderTopColor:colors.border},sourcesTitle:{color:colors.muted,fontSize:9,fontWeight:'900',letterSpacing:1.2,marginBottom:5},sourceLink:{color:colors.gold,fontSize:12,lineHeight:18,marginTop:3},
   starters:{gap:8,marginVertical:4},starterTitle:{color:colors.muted,fontSize:10,fontWeight:'900',letterSpacing:1.5},starter:{backgroundColor:colors.panel2,borderRadius:14,padding:13,borderWidth:1,borderColor:colors.border},starterText:{color:colors.ivory,fontWeight:'800'},
-  liveCard:{backgroundColor:colors.plum,borderRadius:20,padding:18,borderWidth:1,borderColor:colors.border,marginTop:8},liveEyebrow:{color:colors.gold,fontSize:10,fontWeight:'900',letterSpacing:1.4},liveTitle:{color:colors.text,fontSize:20,fontWeight:'900',marginTop:5},liveCopy:{color:colors.ivory,fontSize:13,lineHeight:19,marginTop:5,marginBottom:13},liveButton:{backgroundColor:colors.gold,borderRadius:14,padding:14,alignItems:'center'},liveButtonText:{color:colors.charcoal,fontWeight:'900'},
   aiNotice:{borderTopWidth:1,borderTopColor:colors.border,paddingTop:15,marginTop:6},aiNoticeText:{color:colors.muted,fontSize:12,lineHeight:18,textAlign:'center'},
-  composer:{flexDirection:'row',alignItems:'flex-end',gap:10,padding:12,paddingBottom:Platform.OS === 'ios' ? 24 : 12,borderTopWidth:1,borderTopColor:colors.border,backgroundColor:'#191419'},input:{flex:1,minHeight:48,maxHeight:120,borderRadius:16,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel,paddingHorizontal:14,paddingVertical:12,color:colors.text,fontSize:15},send:{backgroundColor:colors.gold,borderRadius:16,minHeight:48,paddingHorizontal:18,alignItems:'center',justifyContent:'center'},sendDisabled:{opacity:.45},sendText:{color:colors.charcoal,fontWeight:'900'}
+  composer:{flexDirection:'row',alignItems:'flex-end',gap:10,padding:12,borderBottomWidth:1,borderBottomColor:colors.border,backgroundColor:'#191419'},input:{flex:1,minHeight:48,maxHeight:120,borderRadius:16,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel,paddingHorizontal:14,paddingVertical:12,color:colors.text,fontSize:15},send:{backgroundColor:colors.gold,borderRadius:16,minHeight:48,paddingHorizontal:18,alignItems:'center',justifyContent:'center'},sendDisabled:{opacity:.45},sendText:{color:colors.charcoal,fontWeight:'900'}
 });
