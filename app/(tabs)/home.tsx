@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { bibleGuideSets } from '@/data/bibleGuides';
 import { getGuestGuideProgress } from '@/lib/localStore';
-import { countdownParts, nextDiscussionDate, type LiveDiscussion } from '@/lib/liveDiscussion';
+import { countdownParts, localDiscussionLabel, nextDiscussionDate, type LiveDiscussion } from '@/lib/liveDiscussion';
 import { scheduleDiscussionReminder } from '@/lib/notifications';
 
 type Video = { videoId: string; title: string; thumbnail?: string; channelTitle?: string; watchUrl: string; durationSeconds?: number };
@@ -188,23 +188,24 @@ export default function HomeScreen() {
         </View>
       </View> : null}
 
+      {discussion && next && cd ? <Card>
+        <Eyebrow>NEXT LIVE DISCUSSION</Eyebrow>
+        <Text style={styles.sectionTitle}>{localDiscussionLabel(next)}</Text>
+        <Text style={styles.localTimeNote}>Shown in your local time zone</Text>
+        <View style={styles.countdown}>
+          {[['DAYS', cd.days], ['HRS', cd.hours], ['MIN', cd.minutes], ['SEC', cd.seconds]].map(([label, value]) => <View key={String(label)} style={styles.timeBox}><Text style={styles.timeNum}>{String(value).padStart(2, '0')}</Text><Text style={styles.timeLabel}>{label}</Text></View>)}
+        </View>
+        <View style={styles.row}><GoldButton title="Enter Zoom Call Here" onPress={() => Linking.openURL(discussion.zoom_url)} /><OutlineButton title="Remind Me" onPress={() => Alert.alert('Choose a reminder', 'When should we remind you?', [
+          { text: '24 hours before', onPress: () => remind(1440) }, { text: '1 hour before', onPress: () => remind(60) }, { text: '15 minutes before', onPress: () => remind(15) }, { text: 'At start time', onPress: () => remind(0) }, { text: 'Cancel', style: 'cancel' },
+        ])} /></View>
+      </Card> : null}
+
       <Card style={styles.askCard}>
         <Eyebrow>ASK WITHOUT EMBARRASSMENT</Eyebrow>
         <Text style={styles.sectionTitle}>Ask Pastor Kal</Text>
         <Text style={styles.body}>Ask a Bible question privately. The AI searches Pastor Kal's approved Try Jesus Media knowledge base and shows the material behind its answer.</Text>
         <GoldButton title="Ask a Bible Question" onPress={() => router.push('/(tabs)/ask')} />
       </Card>
-
-      {discussion && next && cd ? <Card>
-        <Eyebrow>NEXT LIVE DISCUSSION</Eyebrow>
-        <Text style={styles.sectionTitle}>Thursday • 8:00 PM Eastern</Text>
-        <View style={styles.countdown}>
-          {[['DAYS', cd.days], ['HRS', cd.hours], ['MIN', cd.minutes], ['SEC', cd.seconds]].map(([label, value]) => <View key={String(label)} style={styles.timeBox}><Text style={styles.timeNum}>{String(value).padStart(2, '0')}</Text><Text style={styles.timeLabel}>{label}</Text></View>)}
-        </View>
-        <View style={styles.row}><GoldButton title="Join Discussion" onPress={() => Linking.openURL(discussion.zoom_url)} /><OutlineButton title="Remind Me" onPress={() => Alert.alert('Choose a reminder', 'When should we remind you?', [
-          { text: '24 hours before', onPress: () => remind(1440) }, { text: '1 hour before', onPress: () => remind(60) }, { text: '15 minutes before', onPress: () => remind(15) }, { text: 'At start time', onPress: () => remind(0) }, { text: 'Cancel', style: 'cancel' },
-        ])} /></View>
-      </Card> : null}
 
       <View style={{height: 24}} />
     </ScrollView>
@@ -215,6 +216,6 @@ const styles = StyleSheet.create({
   page:{flex:1,backgroundColor:colors.charcoal},content:{padding:20,paddingTop:52,gap:18},
   header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:4},brand:{color:colors.ivory,fontWeight:'900',fontSize:20,letterSpacing:.5},media:{color:colors.gold,fontWeight:'800',fontSize:11,letterSpacing:2.2},mark:{width:56,height:56},
   hero:{backgroundColor:colors.plum,padding:24},askCard:{backgroundColor:colors.panel2},heroTitle:{color:colors.text,fontSize:30,fontWeight:'800',lineHeight:36,marginBottom:10},body:{color:colors.ivory,fontSize:15,lineHeight:23,marginBottom:18},sectionTitle:{color:colors.text,fontSize:21,fontWeight:'800',lineHeight:27,marginBottom:8},meta:{color:colors.muted,fontSize:13,marginBottom:14},
-  countdown:{flexDirection:'row',gap:8,marginVertical:16},timeBox:{flex:1,backgroundColor:colors.panel2,borderRadius:14,paddingVertical:12,alignItems:'center'},timeNum:{color:colors.gold,fontSize:24,fontWeight:'900'},timeLabel:{color:colors.muted,fontSize:9,letterSpacing:1.5,fontWeight:'800'},
+  countdown:{flexDirection:'row',gap:8,marginVertical:16},localTimeNote:{color:colors.muted,fontSize:12,fontWeight:'700',marginTop:-3},timeBox:{flex:1,backgroundColor:colors.panel2,borderRadius:14,paddingVertical:12,alignItems:'center'},timeNum:{color:colors.gold,fontSize:24,fontWeight:'900'},timeLabel:{color:colors.muted,fontSize:9,letterSpacing:1.5,fontWeight:'800'},
   row:{gap:10,marginTop:10},videoCard:{padding:14},videoImage:{width:'100%',aspectRatio:16/9,borderRadius:16,marginBottom:14,backgroundColor:colors.plum},productCard:{padding:14},productImage:{width:'100%',aspectRatio:1.6,borderRadius:14,backgroundColor:colors.plum,marginBottom:12},pin:{color:colors.gold,fontSize:10,fontWeight:'900',letterSpacing:1.4,marginBottom:5},productName:{color:colors.text,fontSize:17,fontWeight:'800',marginBottom:5},carouselDots:{flexDirection:'row',justifyContent:'center',gap:7,marginTop:10},carouselDot:{width:7,height:7,borderRadius:4,backgroundColor:colors.border},carouselDotActive:{width:18,backgroundColor:colors.gold}
 });

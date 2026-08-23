@@ -62,3 +62,14 @@ export function countdownParts(target: Date, now = new Date()) {
     seconds: seconds % 60,
   };
 }
+
+export function localDiscussionLabel(target: Date) {
+  const parts = new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  }).formatToParts(target);
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
+  return `${value('weekday')} • ${value('hour')}:${value('minute')} ${value('dayPeriod')} ${value('timeZoneName')}`.replace(/\s+/g, ' ').trim();
+}
