@@ -203,7 +203,7 @@ export default function HomeScreen() {
       <Card style={styles.askCard}>
         <Eyebrow>ASK WITHOUT EMBARRASSMENT</Eyebrow>
         <Text style={styles.sectionTitle}>Ask Pastor Kal</Text>
-        <Text style={styles.body}>Ask a Bible question privately. The AI searches Pastor Kal's approved Try Jesus Media knowledge base and shows the material behind its answer.</Text>
+        <Text style={styles.body}>Ask this AI chatbot any Bible question in a private, welcoming space, and save your conversations so you can revisit them anytime.</Text>
         <GoldButton title="Ask a Bible Question" onPress={() => router.push('/(tabs)/ask')} />
       </Card>
 
