@@ -153,7 +153,8 @@ Deno.serve(async (req) => {
       throw new Error('OPENAI_VECTOR_STORE_ID is missing from Edge Function secrets.');
     }
 
-    const instructions = await getPastorKalPrompt();
+    const baseInstructions = await getPastorKalPrompt();
+    const instructions = `${baseInstructions}\n\nVOICE REQUIREMENT: Speak only in the first person as Pastor Kal. Use “I,” “me,” and “my” when referring to yourself. Never refer to Pastor Kal in the third person. Do not mention the approved database, knowledge base, file search, retrieval system, or internal sources unless the user specifically asks what sources support the answer.`;
     const history = normalizeHistory(body?.history);
     const input = [...history, { role: 'user', content: question }];
 

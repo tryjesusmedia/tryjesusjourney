@@ -30,7 +30,7 @@ const starters = [
 export default function AskPastorKalScreen() {
   const { session } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: 'welcome', role: 'assistant', text: "I'm Ask Pastor Kal. Ask an honest Bible question and I'll answer from Pastor Kal's approved Try Jesus Media knowledge base, Scripture references, and organized study material. If the database does not clearly support an answer, I'll tell you rather than invent one." },
+    { id: 'welcome', role: 'assistant', text: "I'm Pastor Kal. Ask me any honest Bible question, and I'll give you a thoughtful answer rooted in Scripture. If you're curious about my sources, just ask me." },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -106,9 +106,9 @@ export default function AskPastorKalScreen() {
   return (
     <KeyboardAvoidingView style={styles.page} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>PRIVATE · DATABASE-GROUNDED</Text>
+        <Text style={styles.eyebrow}>PRIVATE · WELCOMING</Text>
         <Text style={styles.title}>Ask Pastor Kal</Text>
-        <Text style={styles.subtitle}>Bible answers grounded in Pastor Kal's organized Try Jesus Media knowledge base—not free-form theological guessing.</Text>
+        <Text style={styles.subtitle}>Ask me any Bible question in a private, welcoming space.</Text>
       </View>
 
       <View style={styles.composer}>
@@ -132,20 +132,6 @@ export default function AskPastorKalScreen() {
           <View key={message.id} style={[styles.message, message.role === 'user' ? styles.userMessage : styles.assistantMessage]}>
             <Text style={styles.role}>{message.role === 'user' ? 'YOU' : 'PASTOR KAL AI'}</Text>
             <Text style={styles.messageText}>{message.text}</Text>
-            {message.sources?.length ? (
-              <View style={styles.sources}>
-                <Text style={styles.sourcesTitle}>FROM THE APPROVED DATABASE</Text>
-                {message.sources.slice(0, 5).map((source, index) => {
-                  const label = source.source_title || source.topic || source.category || `Source ${index + 1}`;
-                  const scriptures = Array.isArray(source.scripture_refs) ? source.scripture_refs.join(', ') : source.scripture_refs;
-                  return (
-                    <Pressable key={`${source.id ?? label}-${index}`} onPress={() => source.source_url ? Linking.openURL(source.source_url) : undefined}>
-                      <Text style={styles.sourceLink}>• {label}{scriptures ? ` — ${scriptures}` : ''}{source.source_url ? ' ↗' : ''}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ) : null}
           </View>
         ))}
         {loading ? <View style={[styles.message, styles.assistantMessage, styles.loading]}><ActivityIndicator color={colors.gold} /><Text style={styles.messageText}>Kal is checking his notes...</Text></View> : null}
@@ -169,7 +155,6 @@ export default function AskPastorKalScreen() {
 const styles = StyleSheet.create({
   page:{flex:1,backgroundColor:colors.charcoal},header:{paddingHorizontal:20,paddingTop:52,paddingBottom:14,borderBottomWidth:1,borderBottomColor:colors.border},eyebrow:{color:colors.gold,fontWeight:'900',fontSize:10,letterSpacing:1.8,marginBottom:5},title:{color:colors.text,fontSize:30,fontWeight:'900'},subtitle:{color:colors.muted,fontSize:13,lineHeight:19,marginTop:5},
   chat:{flex:1},chatContent:{padding:16,gap:12,paddingBottom:28},message:{borderRadius:20,padding:16,borderWidth:1},assistantMessage:{backgroundColor:colors.panel,borderColor:colors.border,marginRight:28},userMessage:{backgroundColor:colors.plum,borderColor:'rgba(255,255,255,.12)',marginLeft:28},role:{color:colors.gold,fontSize:9,fontWeight:'900',letterSpacing:1.4,marginBottom:6},messageText:{color:colors.text,fontSize:15,lineHeight:23},loading:{flexDirection:'row',gap:10,alignItems:'center'},
-  sources:{marginTop:14,paddingTop:11,borderTopWidth:1,borderTopColor:colors.border},sourcesTitle:{color:colors.muted,fontSize:9,fontWeight:'900',letterSpacing:1.2,marginBottom:5},sourceLink:{color:colors.gold,fontSize:12,lineHeight:18,marginTop:3},
   starters:{gap:8,marginVertical:4},starterTitle:{color:colors.muted,fontSize:10,fontWeight:'900',letterSpacing:1.5},starter:{backgroundColor:colors.panel2,borderRadius:14,padding:13,borderWidth:1,borderColor:colors.border},starterText:{color:colors.ivory,fontWeight:'800'},
   aiNotice:{borderTopWidth:1,borderTopColor:colors.border,paddingTop:15,marginTop:6},aiNoticeText:{color:colors.muted,fontSize:12,lineHeight:18,textAlign:'center'},phoneLink:{color:colors.gold,fontWeight:'900',textDecorationLine:'underline'},
   composer:{flexDirection:'row',alignItems:'flex-end',gap:10,padding:12,borderBottomWidth:1,borderBottomColor:colors.border,backgroundColor:'#191419'},input:{flex:1,minHeight:48,maxHeight:120,borderRadius:16,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel,paddingHorizontal:14,paddingVertical:12,color:colors.text,fontSize:15},send:{backgroundColor:colors.gold,borderRadius:16,minHeight:48,paddingHorizontal:18,alignItems:'center',justifyContent:'center'},sendDisabled:{opacity:.45},sendText:{color:colors.charcoal,fontWeight:'900'}
