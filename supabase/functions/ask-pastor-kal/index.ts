@@ -3,167 +3,210 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type HistoryMessage = { role: 'user' | 'assistant'; content: string };
-type Knowledge = {
-  id: number;
-  source_id?: number | null;
-  collection?: string;
-  category?: string;
-  topic?: string;
-  question?: string | null;
+const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
+const PASTOR_KAL_PROMPT_URL =
+  'https://raw.githubusercontent.com/tryjesusmedia/tjm/main/lib/pastor-kal-prompt.js';
+const MAX_MESSAGE_CHARS = 6000;
+const MAX_HISTORY_ITEMS = 14;
+
+type HistoryMessage = {
+  role: 'user' | 'assistant';
   content: string;
-  scripture_refs?: string[];
-  keywords?: string[];
-  source_title?: string | null;
-  source_url?: string | null;
-  score?: number;
 };
 
-function getSupabaseServerKey() {
-  const current = Deno.env.get('SUPABASE_SECRET_KEYS');
-  if (current) {
-    try {
-      const parsed = JSON.parse(current);
-      if (parsed.default) return parsed.default as string;
-      const first = Object.values(parsed)[0];
-      if (typeof first === 'string') return first;
-    } catch (_) {}
-  }
-  return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+let cachedPastorKalPrompt: string | null = null;
+
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      ...corsHeaders,
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff',
+    },
+  });
 }
 
-function extractResponseText(payload: any) {
+async function getPastorKalPrompt() {
+  if (cachedPastorKalPrompt) return cachedPastorKalPrompt;
+
+  const response = await fetch(PASTOR_KAL_PROMPT_URL, {
+    headers: { 'user-agent': 'TryJesusJourney/1.0' },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Could not load Pastor Kal prompt: ${response.status}`);
+  }
+
+  const source = await response.text();
+  const marker = 'String.raw`';
+  const start = source.indexOf(marker);
+  const end = source.lastIndexOf('`;');
+
+  if (start === -1 || end === -1 || end <= start + marker.length) {
+    throw new Error('Pastor Kal prompt file format was not recognized.');
+  }
+
+  cachedPastorKalPrompt = source.slice(start + marker.length, end);
+  return cachedPastorKalPrompt;
+}
+
+function normalizeHistory(history: unknown): HistoryMessage[] {
+  if (!Array.isArray(history)) return [];
+
+  return history
+    .slice(-MAX_HISTORY_ITEMS)
+    .filter(
+      (item) =>
+        item &&
+        (item.role === 'user' || item.role === 'assistant') &&
+        typeof item.content === 'string',
+    )
+    .map((item) => ({
+      role: item.role,
+      content: String(item.content).slice(0, MAX_MESSAGE_CHARS),
+    }))
+    .filter((item) => item.content.trim().length > 0);
+}
+
+function extractOutputText(payload: any) {
   if (typeof payload?.output_text === 'string') return payload.output_text;
-  const parts: string[] = [];
+
+  const chunks: string[] = [];
   for (const item of payload?.output ?? []) {
     if (item?.type !== 'message') continue;
-    for (const content of item?.content ?? []) {
-      if (content?.type === 'output_text' && typeof content.text === 'string') parts.push(content.text);
+    for (const part of item?.content ?? []) {
+      if (part?.type === 'output_text' && typeof part.text === 'string') {
+        chunks.push(part.text);
+      }
     }
   }
-  return parts.join('\n').trim();
+
+  return chunks.join('\n').trim();
+}
+
+function extractFileSources(payload: any) {
+  const seen = new Set<string>();
+  const sources: Array<{
+    id: string;
+    category: string;
+    topic: string;
+    source_title: string;
+    source_url: null;
+    scripture_refs: string[];
+  }> = [];
+
+  for (const item of payload?.output ?? []) {
+    if (item?.type !== 'file_search_call') continue;
+
+    for (const result of item?.results ?? []) {
+      const filename = result?.filename || result?.file_name;
+      if (!filename || seen.has(filename)) continue;
+
+      seen.add(filename);
+      sources.push({
+        id: String(result?.file_id || filename),
+        category: 'Approved Pastor Kal knowledge',
+        topic: filename,
+        source_title: filename,
+        source_url: null,
+        scripture_refs: [],
+      });
+
+      if (sources.length >= 6) return sources;
+    }
+  }
+
+  return sources;
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  if (req.method !== 'POST') {
+    return json({ error: 'Method not allowed.' }, 405);
+  }
 
   try {
     const body = await req.json().catch(() => ({}));
-    const question = String(body?.question ?? '').trim();
-    const history = Array.isArray(body?.history) ? body.history.slice(-8) as HistoryMessage[] : [];
-    if (!question) throw new Error('Please ask a question.');
-    if (question.length > 1200) throw new Error('Please shorten the question to 1,200 characters or fewer.');
+    const question = String(body?.question ?? body?.message ?? '').trim();
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const serverKey = getSupabaseServerKey();
+    if (!question) return json({ error: 'Please ask a question.' }, 400);
+    if (question.length > MAX_MESSAGE_CHARS) {
+      return json(
+        { error: `Please shorten the question to ${MAX_MESSAGE_CHARS.toLocaleString()} characters or fewer.` },
+        413,
+      );
+    }
+
     const openaiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
+    const vectorStoreId = Deno.env.get('OPENAI_VECTOR_STORE_ID') ?? '';
     const model = Deno.env.get('OPENAI_MODEL') ?? 'gpt-5.6';
 
-    if (!supabaseUrl || !serverKey) throw new Error('Supabase server configuration is missing.');
-    if (!openaiKey) throw new Error('OPENAI_API_KEY is missing from Edge Function secrets.');
-
-    const rpcResponse = await fetch(`${supabaseUrl}/rest/v1/rpc/search_pastor_kal_knowledge`, {
-      method: 'POST',
-      headers: { apikey: serverKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ search_query: question, match_count: 10 }),
-    });
-
-    let knowledge: Knowledge[] = [];
-    if (rpcResponse.ok) knowledge = await rpcResponse.json();
-
-    // Fallback for questions whose wording does not produce an FTS match.
-    // The model is still restricted to approved rows from the organized knowledge table.
-    if (!knowledge.length) {
-      const fallback = await fetch(
-        `${supabaseUrl}/rest/v1/pastor_kal_knowledge?select=id,source_id,collection,category,topic,question,content,scripture_refs,keywords,priority,sort_order&active=eq.true&order=priority.desc,sort_order.asc&limit=8`,
-        { headers: { apikey: serverKey } },
-      );
-      if (fallback.ok) knowledge = await fallback.json();
+    if (!openaiKey) {
+      throw new Error('OPENAI_API_KEY is missing from Edge Function secrets.');
+    }
+    if (!vectorStoreId) {
+      throw new Error('OPENAI_VECTOR_STORE_ID is missing from Edge Function secrets.');
     }
 
-    const sourceIds = [...new Set(knowledge.map((k) => k.source_id).filter(Boolean))];
-    let sourceMap = new Map<number, { title?: string; source_url?: string }>();
-    if (sourceIds.length) {
-      const sourceResponse = await fetch(
-        `${supabaseUrl}/rest/v1/pastor_kal_sources?select=id,title,source_url&id=in.(${sourceIds.join(',')})`,
-        { headers: { apikey: serverKey } },
-      );
-      if (sourceResponse.ok) {
-        const rows = await sourceResponse.json();
-        sourceMap = new Map(rows.map((row: any) => [Number(row.id), row]));
-      }
-    }
+    const instructions = await getPastorKalPrompt();
+    const history = normalizeHistory(body?.history);
+    const input = [...history, { role: 'user', content: question }];
 
-    const context = knowledge.map((row, index) => {
-      const source = row.source_id ? sourceMap.get(Number(row.source_id)) : undefined;
-      const title = row.source_title || source?.title || row.topic || `Knowledge item ${index + 1}`;
-      const url = row.source_url || source?.source_url || '';
-      const scriptures = Array.isArray(row.scripture_refs) && row.scripture_refs.length ? row.scripture_refs.join(', ') : 'None listed';
-      return [
-        `[SOURCE ${index + 1}]`,
-        `Collection: ${row.collection ?? 'Bible Guides'}`,
-        `Category: ${row.category ?? 'General'}`,
-        `Topic: ${row.topic ?? ''}`,
-        `Source title: ${title}`,
-        `Source URL: ${url}`,
-        `Scripture references: ${scriptures}`,
-        row.question ? `Approved question framing: ${row.question}` : '',
-        `Approved content:\n${row.content}`,
-      ].filter(Boolean).join('\n');
-    }).join('\n\n');
-
-    const instructions = `You are Ask Pastor Kal, the Try Jesus Media Bible-study assistant.\n\nGROUNDING RULES:\n- Answer from the APPROVED KNOWLEDGE supplied below and Scripture references contained in it.\n- Preserve Pastor Kal / Try Jesus Media's theological positions represented by the approved database.\n- Do not invent a ministry position or claim that is not supported by the approved material.\n- If the approved database is insufficient, clearly say you do not have enough approved material to answer confidently, then invite the user to the Thursday live discussion at https://tryjesusmedia.com/welcome/ or to email info@tryjesusmedia.com.\n- Distinguish Scripture from interpretation.\n- Be warm, direct, concise, and understandable to a spiritually curious adult.\n- Avoid manipulative pressure.\n- When useful, cite Bible references naturally in the answer.\n- Never claim to literally be Pastor Kal; you are an AI assistant grounded in his approved material.\n\nAPPROVED KNOWLEDGE:\n${context || '[No approved knowledge was retrieved.]'}`;
-
-    const conversation = history
-      .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
-      .map((m) => `${m.role === 'user' ? 'User' : 'Ask Pastor Kal'}: ${m.content}`)
-      .join('\n');
-
-    const input = `${conversation ? `RECENT CONVERSATION:\n${conversation}\n\n` : ''}CURRENT QUESTION:\n${question}`;
-
-    const aiResponse = await fetch('https://api.openai.com/v1/responses', {
+    const openAIResponse = await fetch(OPENAI_RESPONSES_URL, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json',
+        authorization: `Bearer ${openaiKey}`,
+        'content-type': 'application/json',
       },
       body: JSON.stringify({
         model,
         instructions,
         input,
+        store: false,
+        tools: [
+          {
+            type: 'file_search',
+            vector_store_ids: [vectorStoreId],
+            max_num_results: 10,
+          },
+        ],
+        include: ['file_search_call.results'],
       }),
     });
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      throw new Error(`AI response failed: ${aiResponse.status} ${errorText.slice(0, 400)}`);
+    const payload = await openAIResponse.json().catch(() => ({}));
+
+    if (!openAIResponse.ok) {
+      console.error('OpenAI error', openAIResponse.status, payload);
+      return json(
+        { error: 'Pastor Kal could not answer that right now. Please try again.' },
+        openAIResponse.status >= 500 ? 502 : 400,
+      );
     }
 
-    const aiJson = await aiResponse.json();
-    const answer = extractResponseText(aiJson);
-    if (!answer) throw new Error('The AI service returned an empty answer.');
+    const answer = extractOutputText(payload);
+    if (!answer) {
+      return json(
+        { error: 'No answer was generated. Please try rephrasing your question.' },
+        502,
+      );
+    }
 
-    const sources = knowledge.slice(0, 6).map((row) => {
-      const source = row.source_id ? sourceMap.get(Number(row.source_id)) : undefined;
-      return {
-        id: row.id,
-        category: row.category,
-        topic: row.topic,
-        scripture_refs: row.scripture_refs ?? [],
-        source_title: row.source_title || source?.title || row.topic,
-        source_url: row.source_url || source?.source_url || null,
-      };
-    });
-
-    return new Response(JSON.stringify({ answer, sources }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return json({
+      answer,
+      sources: extractFileSources(payload),
+      knowledgeConnected: true,
     });
   } catch (error) {
     console.error(error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return json(
+      { error: error instanceof Error ? error.message : 'Unknown error' },
+      500,
+    );
   }
 });
