@@ -84,7 +84,7 @@ export default function HomeScreen() {
         productCarousel.current?.scrollToOffset({ offset: nextIndex * carouselWidth, animated: true });
         return nextIndex;
       });
-    }, 1000);
+    }, 3000);
     return () => clearInterval(timer);
   }, [carouselWidth, products.length]);
   useEffect(() => {
@@ -98,7 +98,7 @@ export default function HomeScreen() {
         videoCarousel.current?.scrollToOffset({ offset: nextIndex * videoCarouselWidth, animated: true });
         return nextIndex;
       });
-    }, 1000);
+    }, 3000);
     return () => clearInterval(timer);
   }, [videoCarouselWidth, videos.length]);
 

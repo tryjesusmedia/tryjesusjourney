@@ -19,7 +19,7 @@ export default function ProgramsScreen() {
   const list = useRef<FlatList<Product>>(null);
 
   useEffect(() => { supabase.functions.invoke('random-fourthwall-products', { body: {} }).then(({ data, error }) => { if (data?.products && !error) setProducts(selectProducts(data.products)); }); }, []);
-  useEffect(() => { if (products.length < 2 || !width) return; const timer = setInterval(() => setIndex((current) => { const next = (current + 1) % products.length; list.current?.scrollToOffset({ offset: next * width, animated: true }); return next; }), 1000); return () => clearInterval(timer); }, [products.length, width]);
+  useEffect(() => { if (products.length < 2 || !width) return; const timer = setInterval(() => setIndex((current) => { const next = (current + 1) % products.length; list.current?.scrollToOffset({ offset: next * width, animated: true }); return next; }), 3000); return () => clearInterval(timer); }, [products.length, width]);
 
   return <View style={styles.page}>
     <Eyebrow>CONTINUE YOUR JOURNEY</Eyebrow><Text style={styles.title}>Programs & resources selected for you.</Text>
