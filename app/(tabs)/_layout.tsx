@@ -26,7 +26,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: ({color}) => <Icon label="✦" color={color} /> }} />
       <Tabs.Screen name="bible" options={{ title: 'Bible', tabBarIcon: ({color}) => <Icon label="▣" color={color} /> }} />
       <Tabs.Screen name="journey" options={{ href: null }} />
-      <Tabs.Screen name="journal" options={{ title: 'Journal', tabBarIcon: ({color}) => <Icon label="✎" color={color} /> }} />
+      <Tabs.Screen name="journal" options={{ href: null }} />
       <Tabs.Screen name="ask" options={{ title: 'Ask Kal', tabBarIcon: ({color}) => <Icon label="?" color={color} /> }} />
       <Tabs.Screen name="more" options={{ title: 'More', tabBarIcon: ({color}) => <Icon label="•••" color={color} /> }} />
     </Tabs>

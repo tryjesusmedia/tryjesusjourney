@@ -27,7 +27,7 @@ export default function LoginScreen() {
       <Image source={require('@/assets/logo.png')} style={styles.logo} resizeMode="contain" />
       <Text style={styles.kicker}>TRY JESUS: THE JOURNEY</Text>
       <Text style={styles.title}>Continue your journey.</Text>
-      <Text style={styles.lead}>Your Bible guides, progress, journal, live discussion and carefully selected resources—together in one private experience.</Text>
+      <Text style={styles.lead}>Your Bible guides, progress, Prayer Journal, live discussion and carefully selected resources—together in one private experience.</Text>
       <View style={styles.stack}>
         <GoldButton title="Continue with Google" loading={busy === 'google'} onPress={() => social('google')} />
         <OutlineButton title="Continue with Facebook" onPress={() => social('facebook')} />
