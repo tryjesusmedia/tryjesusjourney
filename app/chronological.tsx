@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Linking, Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,8 @@ import { loadChronologicalProgress, saveChronologicalProgress, type Chronologica
 export default function ChronologicalPlanScreen() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
+  const listRef = useRef<SectionList<ChronologicalReading>>(null);
+  const pendingScroll = useRef<{ sectionIndex: number; itemIndex: number; retries: number } | null>(null);
   const pathname = usePathname();
   const [progress, setProgress] = useState<ChronologicalProgress>({ completed: [], lastIndex: 0 });
   const [ready, setReady] = useState(false);
@@ -26,6 +28,7 @@ export default function ChronologicalPlanScreen() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const completedSet = useMemo(() => new Set(progress.completed), [progress.completed]);
+  const sections = useMemo(() => chronologicalBiblePlan.map((section) => ({ title: section.title, data: section.readings })), []);
   const percent = Math.round((completedSet.size / chronologicalReadings.length) * 100);
   const next = chronologicalReadings.find((r) => !completedSet.has(r.id)) ?? chronologicalReadings[chronologicalReadings.length - 1];
 
@@ -38,10 +41,20 @@ export default function ChronologicalPlanScreen() {
     await saveChronologicalProgress(nextProgress, session?.user.id);
   }
 
-  async function openReading(reading: ChronologicalReading) {
+  function scrollToReading(reading: ChronologicalReading) {
+    const sectionIndex = sections.findIndex((section) => section.data.some((item) => item.id === reading.id));
+    const itemIndex = sectionIndex >= 0 ? sections[sectionIndex].data.findIndex((item) => item.id === reading.id) : -1;
+    if (sectionIndex < 0 || itemIndex < 0) return;
+
+    pendingScroll.current = { sectionIndex, itemIndex, retries: 0 };
+    setTimeout(() => listRef.current?.scrollToLocation({ animated: true, sectionIndex, itemIndex, viewPosition: 0, viewOffset: 8 }), 100);
+  }
+
+  async function openReading(reading: ChronologicalReading, shouldScroll = false) {
     const nextProgress = { ...progress, lastIndex: reading.id };
     setProgress(nextProgress);
-    setExpandedReadingId((current) => current === reading.id ? null : reading.id);
+    setExpandedReadingId((current) => shouldScroll ? reading.id : current === reading.id ? null : reading.id);
+    if (shouldScroll) scrollToReading(reading);
     await saveChronologicalProgress(nextProgress, session?.user.id);
   }
 
@@ -58,15 +71,23 @@ export default function ChronologicalPlanScreen() {
         <View style={styles.continueCard}>
           <Text style={styles.eyebrow}>CONTINUE READING</Text>
           <Text style={styles.continueRef}>{next.reference}</Text>
-          <GoldButton title="Show Next Reading" onPress={() => openReading(next)} />
+          <GoldButton title="Show Next Reading" onPress={() => openReading(next, true)} />
         </View>
       </View>
 
       <SectionList
-        sections={chronologicalBiblePlan.map((s) => ({ title: s.title, data: s.readings }))}
+        ref={listRef}
+        sections={sections}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         stickySectionHeadersEnabled={false}
+        onScrollToIndexFailed={(info) => {
+          const pending = pendingScroll.current;
+          if (!pending || pending.retries >= 3) return;
+          pending.retries += 1;
+          listRef.current?.getScrollResponder()?.scrollTo({ y: info.averageItemLength * info.index, animated: false });
+          setTimeout(() => listRef.current?.scrollToLocation({ animated: true, sectionIndex: pending.sectionIndex, itemIndex: pending.itemIndex, viewPosition: 0, viewOffset: 8 }), 150);
+        }}
         renderSectionHeader={({ section }) => <Text style={styles.sectionTitle}>{section.title}</Text>}
         renderItem={({ item }) => {
           const done = completedSet.has(item.id);
