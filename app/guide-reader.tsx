@@ -18,33 +18,34 @@ export default function GuideReaderScreen() {
   const [savedPercent, setSavedPercent] = useState(0);
   const [ready, setReady] = useState(false);
   const lastSaved = useRef(0);
-  const webRef = useRef<WebView>(null);
-  const restored = useRef(false);
 
   useEffect(() => {
     (async () => {
       if (session) {
         const result = await supabase.from('guide_progress').select('lesson_id,progress_percent').eq('guide_id', guideSet.id).maybeSingle();
-        if (result.data?.lesson_id) setUrl(result.data.lesson_id);
+        if (result.data?.lesson_id) setUrl(guideUrl(guideSet, guideNumberFromUrl(guideSet, result.data.lesson_id)));
         setSavedPercent(result.data?.progress_percent ?? 0);
       } else if (guest) {
         const progress = await getGuestGuideProgress(guideSet.id);
-        if (progress?.lessonUrl) setUrl(progress.lessonUrl);
+        if (progress?.lessonUrl) setUrl(guideUrl(guideSet, guideNumberFromUrl(guideSet, progress.lessonUrl)));
         setSavedPercent(progress?.progressPercent ?? 0);
       }
       setReady(true);
     })();
   }, [guest, guideSet.id, session]);
 
-  async function persist(nextUrl: string, percent: number) {
-    if (Date.now() - lastSaved.current < 1200) return;
+  async function persist(nextUrl: string, percent: number, force = false) {
+    if (!nextUrl.toLowerCase().includes(`/${guideSet.path}/guide`)) return;
+    if (!force && Date.now() - lastSaved.current < 1200) return;
     lastSaved.current = Date.now();
     const bounded = Math.max(0, Math.min(100, Math.round(percent)));
+    const lessonNumber = guideNumberFromUrl(guideSet, nextUrl);
+    const lessonStartUrl = guideUrl(guideSet, lessonNumber);
     if (session) {
-      const { error } = await supabase.from('guide_progress').upsert({ user_id: session.user.id, guide_id: guideSet.id, lesson_id: nextUrl, progress_percent: bounded, completed: guideNumberFromUrl(guideSet, nextUrl) === guideSet.guideCount && bounded >= 99, updated_at: new Date().toISOString() }, { onConflict: 'user_id,guide_id' });
+      const { error } = await supabase.from('guide_progress').upsert({ user_id: session.user.id, guide_id: guideSet.id, lesson_id: lessonStartUrl, progress_percent: bounded, completed: lessonNumber === guideSet.guideCount && bounded >= 99, updated_at: new Date().toISOString() }, { onConflict: 'user_id,guide_id' });
       if (error) console.warn(error.message);
     } else if (guest) {
-      await saveGuestGuideProgress(guideSet.id, { lessonUrl: nextUrl, progressPercent: bounded, updatedAt: new Date().toISOString() });
+      await saveGuestGuideProgress(guideSet.id, { lessonUrl: lessonStartUrl, progressPercent: bounded, updatedAt: new Date().toISOString() });
     }
   }
 
@@ -56,24 +57,17 @@ export default function GuideReaderScreen() {
       <View style={styles.headerCopy}><Text style={styles.title}>{guideSet.title}</Text><Text style={styles.guideNumber}>Guide {guideNumberFromUrl(guideSet, url)} of {guideSet.guideCount}</Text></View>
     </View>
     <WebView
-      ref={webRef}
       source={{ uri: url }}
       style={styles.web}
       onNavigationStateChange={(navigation) => {
-        if (navigation.url !== url) { restored.current = false; setSavedPercent(0); }
+        const changedLesson = guideNumberFromUrl(guideSet, navigation.url) !== guideNumberFromUrl(guideSet, url);
+        if (changedLesson) setSavedPercent(0);
         setUrl(navigation.url);
-        persist(navigation.url, navigation.url === url ? savedPercent : 0);
+        persist(navigation.url, changedLesson ? 0 : savedPercent, changedLesson);
       }}
       onScroll={(event) => {
         const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
         persist(url, (contentOffset.y / Math.max(1, contentSize.height - layoutMeasurement.height)) * 100);
-      }}
-      onLoadEnd={() => {
-        if (!restored.current && savedPercent > 1) {
-          restored.current = true;
-          const fraction = Math.max(0, Math.min(1, savedPercent / 100));
-          webRef.current?.injectJavaScript(`(function(){var h=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);window.scrollTo(0,Math.max(0,h*${fraction}));true;})();`);
-        }
       }}
       onError={() => Alert.alert('Guide unavailable', 'Check your internet connection and try again.')}
     />
