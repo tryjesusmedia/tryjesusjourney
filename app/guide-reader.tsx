@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { WebView } from 'react-native-webview';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/theme';
 import { getBibleGuideSet, guideNumberFromUrl, guideUrl } from '@/data/bibleGuides';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { getGuestGuideProgress, saveGuestGuideProgress } from '@/lib/localStore';
 
 export default function GuideReaderScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ set?: string }>();
   const guideSet = getBibleGuideSet(params.set);
   const { session, guest } = useAuth();
@@ -48,9 +50,9 @@ export default function GuideReaderScreen() {
 
   if (!ready) return <View style={styles.center}><Text style={styles.text}>Opening your saved place…</Text></View>;
 
-  return <View style={styles.page}>
+  return <View style={[styles.page, { paddingTop: insets.top + 8 }]}>
     <View style={styles.header}>
-      <Pressable onPress={() => router.back()}><Text style={styles.back}>‹ Bible Guides</Text></Pressable>
+      <Pressable accessibilityRole="button" hitSlop={10} onPress={() => router.back()} style={styles.backButton}><Text style={styles.back}>‹ Bible Guides</Text></Pressable>
       <View style={styles.headerCopy}><Text style={styles.title}>{guideSet.title}</Text><Text style={styles.guideNumber}>Guide {guideNumberFromUrl(guideSet, url)} of {guideSet.guideCount}</Text></View>
     </View>
     <WebView
@@ -79,5 +81,5 @@ export default function GuideReaderScreen() {
 }
 
 const styles = StyleSheet.create({
-  page:{flex:1,backgroundColor:colors.charcoal,paddingTop:46},header:{paddingHorizontal:18,paddingBottom:12},back:{color:colors.gold,fontSize:15,fontWeight:'900',marginBottom:9},headerCopy:{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:12},title:{color:colors.text,fontSize:22,fontWeight:'900',flex:1},guideNumber:{color:colors.muted,fontSize:12,fontWeight:'800'},web:{flex:1,backgroundColor:colors.ivory},center:{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:colors.charcoal},text:{color:colors.ivory},
+  page:{flex:1,backgroundColor:colors.charcoal},header:{paddingHorizontal:18,paddingBottom:12},backButton:{alignSelf:'flex-start',minHeight:44,justifyContent:'center',marginBottom:4},back:{color:colors.gold,fontSize:15,fontWeight:'900'},headerCopy:{flexDirection:'row',alignItems:'baseline',justifyContent:'space-between',gap:12},title:{color:colors.text,fontSize:22,fontWeight:'900',flex:1},guideNumber:{color:colors.muted,fontSize:12,fontWeight:'800'},web:{flex:1,backgroundColor:colors.ivory},center:{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:colors.charcoal},text:{color:colors.ivory},
 });
