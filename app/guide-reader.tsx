@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { WebView } from 'react-native-webview';
@@ -12,7 +12,7 @@ import { getGuestGuideProgress, saveGuestGuideProgress } from '@/lib/localStore'
 export default function GuideReaderScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ set?: string }>();
-  const guideSet = getBibleGuideSet(params.set);
+  const guideSet = useMemo(() => getBibleGuideSet(params.set), [params.set]);
   const { session, guest } = useAuth();
   const [url, setUrl] = useState(guideUrl(guideSet));
   const [savedPercent, setSavedPercent] = useState(0);
@@ -32,7 +32,7 @@ export default function GuideReaderScreen() {
       }
       setReady(true);
     })();
-  }, [guest, guideSet.id, session]);
+  }, [guest, guideSet, session]);
 
   async function persist(nextUrl: string, percent: number, force = false) {
     if (!nextUrl.toLowerCase().includes(`/${guideSet.path}/guide`)) return;

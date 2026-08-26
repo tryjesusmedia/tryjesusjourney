@@ -1,7 +1,7 @@
 import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { signInWithProvider } from '@/lib/auth';
 
@@ -45,15 +45,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => { listener.subscription.unsubscribe(); appState.remove(); };
   }, []);
 
-  async function continueAsGuest() {
+  const continueAsGuest = useCallback(async () => {
     await AsyncStorage.setItem(GUEST_KEY, 'true');
     setGuest(true);
-  }
-  async function signOut() {
+  }, []);
+  const signOut = useCallback(async () => {
     if (session) await supabase.auth.signOut();
     await AsyncStorage.removeItem(GUEST_KEY);
     setSession(null); setGuest(false);
-  }
+  }, [session]);
 
   const value = useMemo<AuthValue>(() => ({
     session, guest, loading,
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInApple: () => signInWithProvider('apple'),
     continueAsGuest,
     signOut,
-  }), [session, guest, loading]);
+  }), [session, guest, loading, continueAsGuest, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -7,11 +7,6 @@
     "scheme": "tryjesusjourney",
     "userInterfaceStyle": "dark",
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#171418"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tryjesusmedia.journey"
@@ -42,6 +37,14 @@
         "expo-notifications",
         {
           "defaultChannel": "live-discussion"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#171418"
         }
       ],
       "expo-secure-store"

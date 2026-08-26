@@ -9,7 +9,7 @@ export type ChronologicalSection = {
   readings: ChronologicalReading[];
 };
 
-const source: Array<[string, string[]]> = [
+const source: [string, string[]][] = [
   ['The Beginning', [
     'Job (1st two chapters and last chapter)',
     'Genesis 1-11',

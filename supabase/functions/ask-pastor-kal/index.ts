@@ -88,14 +88,14 @@ function extractOutputText(payload: any) {
 
 function extractFileSources(payload: any) {
   const seen = new Set<string>();
-  const sources: Array<{
+  const sources: {
     id: string;
     category: string;
     topic: string;
     source_title: string;
     source_url: null;
     scripture_refs: string[];
-  }> = [];
+  }[] = [];
 
   for (const item of payload?.output ?? []) {
     if (item?.type !== 'file_search_call') continue;
