@@ -3,7 +3,11 @@
   "build": {
     "development": {"developmentClient": true, "distribution": "internal"},
     "preview": {"distribution": "internal", "android": {"buildType": "apk"}},
-    "production": {"autoIncrement": true}
+    "production": {
+      "autoIncrement": true,
+      "environment": "production",
+      "android": {"image": "latest"}
+    }
   },
   "submit": {
     "production": {}
