@@ -51,6 +51,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9de4b261-f4d1-4e8d-84b1-c817cae87413"
+      }
+    },
+    "owner": "try-jesus-media"
   }
 }
