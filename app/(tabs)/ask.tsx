@@ -27,6 +27,8 @@ const starters = [
   'How do I begin a relationship with Jesus?',
 ];
 
+const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/Lqv7ZVbC3PPBmQNMjRoXaM';
+
 export default function AskPastorKalScreen() {
   const { session } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -103,7 +105,7 @@ export default function AskPastorKalScreen() {
         <Text style={styles.eyebrow}>PRIVATE · WELCOMING</Text>
         <Text style={styles.title}>Ask Pastor Kal</Text>
         <Text style={styles.subtitle}>Hi, I’m an AI chatbot based on the real Pastor Kal. I’ll thoughtfully answer your questions with Bible-based, Christ-centered guidance that reveals God’s heart.</Text>
-        <Text style={[styles.subtitle, styles.contactSubtitle]}>If you want to contact the real human Pastor Kal, text him at <Text accessibilityRole="link" onPress={() => Linking.openURL('sms:+18162596486')} style={styles.phoneLink}>816-259-6486</Text>.</Text>
+        <Text style={[styles.subtitle, styles.contactSubtitle]}>This Pastor Kal is an AI chat bot. If you&apos;d like to contact the real human Pastor Kal, join the WhatsApp family chat <Text accessibilityRole="link" accessibilityLabel="Join the WhatsApp family chat" onPress={() => Linking.openURL(WHATSAPP_GROUP_URL)} style={styles.contactLink}>here</Text>.</Text>
       </View>
 
       <View style={styles.composer}>
@@ -148,6 +150,6 @@ const styles = StyleSheet.create({
   page:{flex:1,backgroundColor:colors.charcoal},header:{paddingHorizontal:20,paddingTop:52,paddingBottom:14,borderBottomWidth:1,borderBottomColor:colors.border},eyebrow:{color:colors.gold,fontWeight:'900',fontSize:10,letterSpacing:1.8,marginBottom:5},title:{color:colors.text,fontSize:30,fontWeight:'900'},subtitle:{color:colors.muted,fontSize:13,lineHeight:19,marginTop:5},
   chat:{flex:1},chatContent:{padding:16,gap:12,paddingBottom:28},message:{borderRadius:20,padding:16,borderWidth:1},assistantMessage:{backgroundColor:colors.panel,borderColor:colors.border,marginRight:28},userMessage:{backgroundColor:colors.plum,borderColor:'rgba(255,255,255,.12)',marginLeft:28},role:{color:colors.gold,fontSize:9,fontWeight:'900',letterSpacing:1.4,marginBottom:6},messageText:{color:colors.text,fontSize:15,lineHeight:23},loading:{flexDirection:'row',gap:10,alignItems:'center'},
   starters:{gap:8,marginVertical:4},starterTitle:{color:colors.muted,fontSize:10,fontWeight:'900',letterSpacing:1.5},starter:{backgroundColor:colors.panel2,borderRadius:14,padding:13,borderWidth:1,borderColor:colors.border},starterText:{color:colors.ivory,fontWeight:'800'},
-  contactSubtitle:{marginTop:10},phoneLink:{color:colors.gold,fontWeight:'900',textDecorationLine:'underline'},
+  contactSubtitle:{marginTop:10},contactLink:{color:colors.gold,fontWeight:'900',textDecorationLine:'underline'},
   composer:{flexDirection:'row',alignItems:'flex-end',gap:10,padding:12,borderBottomWidth:1,borderBottomColor:colors.border,backgroundColor:'#191419'},input:{flex:1,minHeight:48,maxHeight:120,borderRadius:16,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel,paddingHorizontal:14,paddingVertical:12,color:colors.text,fontSize:15},send:{backgroundColor:colors.gold,borderRadius:16,minHeight:48,paddingHorizontal:18,alignItems:'center',justifyContent:'center'},sendDisabled:{opacity:.45},sendText:{color:colors.charcoal,fontWeight:'900'}
 });
