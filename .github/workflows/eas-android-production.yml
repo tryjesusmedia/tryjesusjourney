@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - .github/workflows/eas-android-production.yml
+      - .github/eas-build-trigger
 
 permissions:
   contents: read

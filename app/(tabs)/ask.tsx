@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors } from '@/constants/theme';
+import { WHATSAPP_GROUP_URL } from '@/constants/links';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 
@@ -26,8 +27,6 @@ const starters = [
   'What does the Bible say about the future?',
   'How do I begin a relationship with Jesus?',
 ];
-
-const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/Lqv7ZVbC3PPBmQNMjRoXaM';
 
 export default function AskPastorKalScreen() {
   const { session } = useAuth();
