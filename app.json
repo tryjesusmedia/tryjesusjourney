@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.tryjesusmedia.journey",
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-padded.png",
         "backgroundColor": "#311E33"

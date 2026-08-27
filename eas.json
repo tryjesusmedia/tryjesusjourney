@@ -4,7 +4,7 @@
     "development": {"developmentClient": true, "distribution": "internal"},
     "preview": {"distribution": "internal", "android": {"buildType": "apk"}},
     "production": {
-      "autoIncrement": true,
+      "autoIncrement": false,
       "environment": "production",
       "android": {"image": "latest"}
     }
