@@ -3,6 +3,22 @@ import planJson from '@/data/conflictPlan.json';
 
 export const CONFLICT_PLAN_ID = 'bible-conflict-ages-v1';
 
+export type ConflictBibleTask = {
+  label: string;
+  reference: string;
+  book: string;
+  chapter: number;
+  url: string;
+};
+
+export type ConflictCommentaryTask = {
+  label: string;
+  chapterNumber: number | null;
+  title: string;
+  paragraphId: number;
+  url: string;
+};
+
 export type ConflictReading = {
   id: string;
   day: number;
@@ -10,10 +26,12 @@ export type ConflictReading = {
   title: string;
   bibleReference: string;
   bibleUrl: string | null;
+  bibleTasks: ConflictBibleTask[];
   commentaryBook: string;
   commentaryCode: string;
   commentaryCitation: string;
-  commentaryUrl: string;
+  commentaryUrl: string | null;
+  commentaryTasks: ConflictCommentaryTask[];
   reviewNote: string | null;
   sourceEntry: string;
 };
