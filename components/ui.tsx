@@ -14,8 +14,8 @@ export function GoldButton({ title, onPress, disabled, loading }: { title: strin
   return <Pressable onPress={onPress} disabled={disabled || loading} style={({ pressed }) => [styles.button, pressed && styles.pressed, (disabled || loading) && styles.disabled]}>{loading ? <ActivityIndicator color={colors.charcoal} /> : <Text style={styles.buttonText}>{title}</Text>}</Pressable>;
 }
 
-export function OutlineButton({ title, onPress }: { title: string; onPress: () => void }) {
-  return <Pressable onPress={onPress} style={({ pressed }) => [styles.outline, pressed && styles.pressed]}><Text style={styles.outlineText}>{title}</Text></Pressable>;
+export function OutlineButton({ title, onPress, disabled }: { title: string; onPress: () => void; disabled?: boolean }) {
+  return <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.outline, pressed && styles.pressed, disabled && styles.disabled]}><Text style={styles.outlineText}>{title}</Text></Pressable>;
 }
 
 const styles = StyleSheet.create({

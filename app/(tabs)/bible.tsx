@@ -11,10 +11,17 @@ export default function BibleScreen() {
     <Text style={styles.subtitle}>Choose how you want to study, continue your progress, or record what is on your heart.</Text>
 
     <Card style={styles.primaryCard}>
+      <Eyebrow>SCRIPTURE + FIVE COMPANION BOOKS</Eyebrow>
+      <Text style={styles.cardTitle}>The Bible & Conflict of the Ages Journey</Text>
+      <Text style={styles.body}>Follow 265 exact reading pairings, save numbered principles and cross-references, and discuss discoveries with other members.</Text>
+      <GoldButton title="Open Today’s Reading" onPress={() => router.push('/conflict-journey' as never)} />
+    </Card>
+
+    <Card>
       <Eyebrow>BIBLE GUIDES</Eyebrow>
       <Text style={styles.cardTitle}>Get to Know Jesus & Bible Prophecy</Text>
       <Text style={styles.body}>Continue either guide set from your saved place and see your progress separately.</Text>
-      <GoldButton title="Open My Bible Guides" onPress={() => router.push('/(tabs)/journey')} />
+      <OutlineButton title="Open My Bible Guides" onPress={() => router.push('/(tabs)/journey')} />
     </Card>
 
     <Card>

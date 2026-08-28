@@ -15,51 +15,23 @@ This adds:
 - `pastor_kal_chat_messages`
 - `search_pastor_kal_knowledge(...)`
 
-## 2. Use the same organized knowledge as the website chatbot
+## 2. Share the website knowledge base
 
-The mobile function is intentionally organized as:
+The mobile Edge Function uses the same OpenAI vector store as the website. It also loads the canonical Pastor Kal instructions from the website repository, so web and app keep one authority hierarchy and one answer policy.
 
-**collection → category → topic → source → content chunk → Scripture references → keywords**
+The five Conflict of the Ages books live in the website repository under `knowledge/sources/conflict-of-the-ages/` and are synchronized with:
 
-If your website Ask Pastor Kal data is already in this same Supabase project, map/copy those approved records into `pastor_kal_sources` and `pastor_kal_knowledge`. Do not put unreviewed internet content into this table.
+`npm run kb:conflict:sync`
 
-Example source:
-
-```sql
-insert into public.pastor_kal_sources
-(collection, title, source_type, source_url, sort_order)
-values
-('Bible Guides', 'Why Does God Allow Evil?', 'bible_guide', 'https://tryjesusmedia.com/lesson-url/', 10)
-returning id;
-```
-
-Example organized chunk (replace `SOURCE_ID`):
-
-```sql
-insert into public.pastor_kal_knowledge
-(source_id, collection, category, topic, question, content, scripture_refs, keywords, priority, sort_order)
-values
-(
-  SOURCE_ID,
-  'Bible Guides',
-  'Character of God',
-  'Why God allows evil',
-  'Why does God allow evil if He is good?',
-  'PASTE THE APPROVED PASTOR KAL / TRY JESUS MEDIA CONTENT HERE',
-  array['Genesis 3', 'Romans 8:28'],
-  array['evil', 'suffering', 'free will', 'God is good'],
-  10,
-  10
-);
-```
-
-The Edge Function searches only approved active rows and gives the answer model those retrieved records as grounding context.
+They are supplemental, hidden retrieval context. Normal answers lead with Scripture and do not show book filenames, chapter/page references, or a “knowledge used” list. The books may be named only when the user specifically asks about Ellen White, a particular book, or supporting sources.
 
 ## 3. Add the AI secret
 
 In **Supabase → Edge Functions → Secrets**, add:
 
 `OPENAI_API_KEY`
+
+`OPENAI_VECTOR_STORE_ID`
 
 Optionally add:
 
@@ -103,3 +75,5 @@ A successful response has:
   ]
 }
 ```
+
+The `sources` array is retained as server-side provenance for testing and private history. The app intentionally does not render it in normal answers.

@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+supabase/.temp/
+.tmp-apk-inspect/
+releases/
+store-assets/
+.env
+.env.*
+.git/

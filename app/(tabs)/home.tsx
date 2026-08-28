@@ -131,6 +131,13 @@ export default function HomeScreen() {
         <GoldButton title={progress ? 'Continue My Bible Guides' : 'Begin My Bible Guides'} onPress={() => router.push('/(tabs)/journey')} />
       </Card>
 
+      <Card style={styles.conflictCard}>
+        <Eyebrow>NEW · SCRIPTURE-FIRST JOURNEY</Eyebrow>
+        <Text style={styles.sectionTitle}>The Bible & Conflict of the Ages</Text>
+        <Text style={styles.body}>Continue the same 265-reading plan, progress, numbered principles, and member discussion you use on tryjesusmedia.com.</Text>
+        <GoldButton title="Open Today’s Reading" onPress={() => router.push('/conflict-journey' as never)} />
+      </Card>
+
       {products.length ? <View>
         <Eyebrow>CONTINUE YOUR JOURNEY</Eyebrow>
         <Text style={styles.sectionTitle}>Programs & resources selected for you.</Text>
@@ -223,7 +230,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   page:{flex:1,backgroundColor:colors.charcoal},content:{padding:20,paddingTop:52,gap:18},
   header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:4},brand:{color:colors.ivory,fontWeight:'900',fontSize:20,letterSpacing:.5},media:{color:colors.gold,fontWeight:'800',fontSize:11,letterSpacing:2.2},mark:{width:56,height:56},
-  whatsappCard:{backgroundColor:colors.panel2},hero:{backgroundColor:colors.plum,padding:24},askCard:{backgroundColor:colors.panel2},heroTitle:{color:colors.text,fontSize:30,fontWeight:'800',lineHeight:36,marginBottom:10},body:{color:colors.ivory,fontSize:15,lineHeight:23,marginBottom:18},sectionTitle:{color:colors.text,fontSize:21,fontWeight:'800',lineHeight:27,marginBottom:8},meta:{color:colors.muted,fontSize:13,marginBottom:14},
+  whatsappCard:{backgroundColor:colors.panel2},hero:{backgroundColor:colors.plum,padding:24},conflictCard:{borderColor:colors.gold,backgroundColor:colors.panel2},askCard:{backgroundColor:colors.panel2},heroTitle:{color:colors.text,fontSize:30,fontWeight:'800',lineHeight:36,marginBottom:10},body:{color:colors.ivory,fontSize:15,lineHeight:23,marginBottom:18},sectionTitle:{color:colors.text,fontSize:21,fontWeight:'800',lineHeight:27,marginBottom:8},meta:{color:colors.muted,fontSize:13,marginBottom:14},
   countdown:{flexDirection:'row',gap:8,marginVertical:16},localTimeNote:{color:colors.muted,fontSize:12,fontWeight:'700',marginTop:-3},timeBox:{flex:1,backgroundColor:colors.panel2,borderRadius:14,paddingVertical:12,alignItems:'center'},timeNum:{color:colors.gold,fontSize:24,fontWeight:'900'},timeLabel:{color:colors.muted,fontSize:9,letterSpacing:1.5,fontWeight:'800'},
   row:{gap:10,marginTop:10},videoCard:{padding:14},videoImage:{width:'100%',aspectRatio:16/9,borderRadius:16,marginBottom:14,backgroundColor:colors.plum},productCard:{padding:14},productImage:{width:'100%',aspectRatio:1.6,borderRadius:14,backgroundColor:colors.plum,marginBottom:12},pin:{color:colors.gold,fontSize:10,fontWeight:'900',letterSpacing:1.4,marginBottom:5},productName:{color:colors.text,fontSize:17,fontWeight:'800',marginBottom:5},carouselDots:{flexDirection:'row',justifyContent:'center',gap:7,marginTop:10},carouselDot:{width:7,height:7,borderRadius:4,backgroundColor:colors.border},carouselDotActive:{width:18,backgroundColor:colors.gold}
 });
