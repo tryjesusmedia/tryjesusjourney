@@ -32,6 +32,12 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
       - name: Install dependencies
         run: npm ci
 
@@ -51,26 +57,12 @@ jobs:
         run: eas whoami
 
       - name: Build production Android App Bundle
-        run: eas build --platform android --profile production --non-interactive --wait --json > eas-build.json
-
-      - name: Download App Bundle
-        shell: bash
-        run: |
-          AAB_URL="$(node -e "const fs=require('fs');const raw=JSON.parse(fs.readFileSync('eas-build.json','utf8'));const build=Array.isArray(raw)?raw[0]:raw;const url=build?.artifacts?.buildUrl||build?.artifacts?.applicationArchiveUrl;if(!url)throw new Error('EAS did not return an Android build artifact URL.');process.stdout.write(url);")"
-          curl --silent --show-error --fail --location --retry 3 "$AAB_URL" --output try-jesus-the-journey.aab
+        run: eas build --platform android --profile production --local --non-interactive --output try-jesus-the-journey.aab
 
       - name: Upload App Bundle
         uses: actions/upload-artifact@v4
         with:
           name: try-jesus-the-journey-android-aab
           path: try-jesus-the-journey.aab
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload EAS build details
-        uses: actions/upload-artifact@v4
-        with:
-          name: eas-build-details
-          path: eas-build.json
           if-no-files-found: error
           retention-days: 14
