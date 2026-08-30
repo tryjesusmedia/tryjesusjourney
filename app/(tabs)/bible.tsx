@@ -1,8 +1,9 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text } from 'react-native';
 import { router } from 'expo-router';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
 import { colors } from '@/constants/theme';
+import { CHRONOLOGICAL_BIBLE_URL } from '@/constants/links';
 
 export default function BibleScreen() {
   return <ScrollView style={styles.page} contentContainerStyle={styles.content}>
@@ -11,10 +12,10 @@ export default function BibleScreen() {
     <Text style={styles.subtitle}>Choose how you want to study, continue your progress, or record what is on your heart.</Text>
 
     <Card style={styles.primaryCard}>
-      <Eyebrow>SCRIPTURE + FIVE COMPANION BOOKS</Eyebrow>
-      <Text style={styles.cardTitle}>The Bible & Conflict of the Ages Journey</Text>
-      <Text style={styles.body}>Follow 265 exact reading pairings, save numbered principles and cross-references, and discuss discoveries with other members.</Text>
-      <GoldButton title="Open Today’s Reading" onPress={() => router.push('/conflict-journey' as never)} />
+      <Eyebrow>READ IN HISTORICAL SEQUENCE</Eyebrow>
+      <Text style={styles.cardTitle}>Chronological Bible</Text>
+      <Text style={styles.body}>Follow the Bible’s story in chronological order on the Try Jesus Media website. Sign in there with Google to save and sync your progress.</Text>
+      <GoldButton title="Open Chronological Bible" onPress={() => Linking.openURL(CHRONOLOGICAL_BIBLE_URL)} />
     </Card>
 
     <Card>
@@ -22,13 +23,6 @@ export default function BibleScreen() {
       <Text style={styles.cardTitle}>Get to Know Jesus & Bible Prophecy</Text>
       <Text style={styles.body}>Continue either guide set from your saved place and see your progress separately.</Text>
       <OutlineButton title="Open My Bible Guides" onPress={() => router.push('/(tabs)/journey')} />
-    </Card>
-
-    <Card>
-      <Eyebrow>READ IN HISTORICAL SEQUENCE</Eyebrow>
-      <Text style={styles.cardTitle}>Bible in Chronological Order</Text>
-      <Text style={styles.body}>Follow the biblical story chapter by chapter and save completed readings.</Text>
-      <OutlineButton title="Open Chronological Bible" onPress={() => router.push('/chronological')} />
     </Card>
 
     <Card>
