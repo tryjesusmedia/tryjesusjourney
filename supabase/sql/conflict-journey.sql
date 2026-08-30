@@ -37,6 +37,7 @@ create table if not exists public.conflict_principles (
   principle_number integer not null check (principle_number > 0),
   body text not null check (char_length(body) between 1 and 2000),
   cross_reference_numbers integer[] not null default '{}',
+  group_id uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, plan_id, principle_number)
@@ -72,6 +73,9 @@ create index if not exists conflict_progress_plan_idx
   on public.conflict_reading_progress (plan_id, reading_id);
 create index if not exists conflict_principles_user_idx
   on public.conflict_principles (user_id, plan_id, principle_number);
+create index if not exists conflict_principles_group_idx
+  on public.conflict_principles (user_id, plan_id, group_id)
+  where group_id is not null;
 create index if not exists conflict_posts_plan_created_idx
   on public.conflict_discussion_posts (plan_id, created_at desc);
 create index if not exists conflict_replies_post_created_idx
