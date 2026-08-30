@@ -3,6 +3,7 @@ import planData from './chronologicalBiblePlan.json';
 export type ChronologicalChapterTask = {
   label: string;
   url: string;
+  progressIndex: number;
 };
 
 export type ChronologicalReading = {
@@ -38,7 +39,10 @@ export const chronologicalBiblePlan: ChronologicalSection[] = planData.sections.
 export const chronologicalPlanMeta = {
   planId: planData.planId,
   legacyPlanId: planData.legacyPlanId,
+  originalLegacyPlanId: planData.originalLegacyPlanId,
   legacyMigration: planData.legacyMigration as Record<string, number[]>,
+  taskChapterMigration: planData.taskChapterMigration as Record<string, number[]>,
   originalReadingCount: planData.originalReadingCount,
   readingCount: planData.readingCount,
+  chapterCount: planData.chapterCount,
 };

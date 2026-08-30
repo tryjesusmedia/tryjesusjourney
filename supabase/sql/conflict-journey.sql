@@ -197,11 +197,16 @@ begin
   if current_user_id is null then
     raise exception 'Authentication required';
   end if;
-  if p_plan_id <> 'bible-conflict-ages-v1' then
+  if p_plan_id = 'bible-conflict-ages-v1' then
+    if p_reading_id !~ '^coa-[0-9]{3}$' then
+      raise exception 'Unknown reading';
+    end if;
+  elsif p_plan_id = 'chronological-bible-order-v3' then
+    if p_reading_id !~ '^chron-[0-9]{3}-[0-9]{2}$' then
+      raise exception 'Unknown reading';
+    end if;
+  else
     raise exception 'Unknown reading plan';
-  end if;
-  if p_reading_id !~ '^coa-[0-9]{3}$' then
-    raise exception 'Unknown reading';
   end if;
   if char_length(trim(p_body)) < 1 or char_length(trim(p_body)) > 2000 then
     raise exception 'Principle must be between 1 and 2000 characters';
