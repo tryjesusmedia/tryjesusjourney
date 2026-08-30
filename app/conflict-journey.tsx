@@ -7,12 +7,15 @@ import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   conflictPlan,
+  conflictTaskProgressIndex,
   createConflictPost,
   createConflictPrinciple,
   createConflictReply,
   isConflictReadingComplete,
+  isConflictTaskGroupComplete,
   loadConflictMemberData,
   saveConflictProgress,
+  saveConflictChapterProgress,
   saveConflictSettings,
   type ConflictMemberData,
   type ConflictPost,
@@ -32,6 +35,7 @@ function guestMemberData(): ConflictMemberData {
   return {
     settings: { start_date: isoDate(new Date()), schedule_mode: 'pace', last_reading_id: conflictPlan.readings[0].id },
     progress: [],
+    chapterProgress: { completed: [], lastIndex: 0 },
     principles: [],
     posts: [],
     replies: [],
@@ -55,8 +59,9 @@ export default function ConflictJourneyScreen() {
   const [replyBodies, setReplyBodies] = useState<Record<string, string>>({});
 
   const progressMap = useMemo(() => new Map((data?.progress ?? []).map((row) => [row.reading_id, row])), [data?.progress]);
+  const chapterCompletedSet = useMemo(() => new Set(data?.chapterProgress.completed ?? []), [data?.chapterProgress.completed]);
   const reading = conflictPlan.readings[currentIndex];
-  const completed = useMemo(() => conflictPlan.readings.filter((item) => isConflictReadingComplete(item, progressMap.get(item.id))).length, [progressMap]);
+  const completed = useMemo(() => conflictPlan.readings.filter((item) => isConflictReadingComplete(item, progressMap.get(item.id), chapterCompletedSet)).length, [chapterCompletedSet, progressMap]);
 
   const load = useCallback(async () => {
     if (!session) {
@@ -70,8 +75,9 @@ export default function ConflictJourneyScreen() {
       setData(next);
       const nextProgress = new Map(next.progress.map((row) => [row.reading_id, row]));
       const savedIndex = next.settings.last_reading_id ? conflictPlan.readings.findIndex((item) => item.id === next.settings.last_reading_id) : -1;
-      const firstIncomplete = conflictPlan.readings.findIndex((item) => !isConflictReadingComplete(item, nextProgress.get(item.id)));
-      const index = savedIndex >= 0 && !isConflictReadingComplete(conflictPlan.readings[savedIndex], nextProgress.get(conflictPlan.readings[savedIndex].id)) ? savedIndex : firstIncomplete >= 0 ? firstIncomplete : conflictPlan.readings.length - 1;
+      const nextChapterCompleted = new Set(next.chapterProgress.completed);
+      const firstIncomplete = conflictPlan.readings.findIndex((item) => !isConflictReadingComplete(item, nextProgress.get(item.id), nextChapterCompleted));
+      const index = savedIndex >= 0 && !isConflictReadingComplete(conflictPlan.readings[savedIndex], nextProgress.get(conflictPlan.readings[savedIndex].id), nextChapterCompleted) ? savedIndex : firstIncomplete >= 0 ? firstIncomplete : conflictPlan.readings.length - 1;
       setCurrentIndex(index);
       setOpenBook(conflictPlan.readings[index].code);
     } catch (caught) {
@@ -95,18 +101,32 @@ export default function ConflictJourneyScreen() {
     if (session && data) saveConflictSettings(session.user.id, { ...data.settings, last_reading_id: conflictPlan.readings[safe].id }).then((settings) => setData((current) => current ? { ...current, settings } : current)).catch(() => {});
   }
 
-  async function toggleProgress(field: 'bible_complete' | 'commentary_complete') {
+  async function toggleChapter(kind: 'bible' | 'commentary', taskIndex: number) {
     if (!session || !data) return;
+    const chapterIndex = conflictTaskProgressIndex(reading.id, kind, taskIndex);
+    const nextCompleted = chapterCompletedSet.has(chapterIndex)
+      ? data.chapterProgress.completed.filter((index) => index !== chapterIndex)
+      : [...data.chapterProgress.completed, chapterIndex];
+    const nextChapterProgress = { completed: nextCompleted, lastIndex: currentIndex };
+    const nextCompletedSet = new Set(nextCompleted);
     const previous = progressMap.get(reading.id) ?? { reading_id: reading.id, bible_complete: false, commentary_complete: false };
-    const next = { ...previous, [field]: !previous[field] };
-    setData({ ...data, progress: [...data.progress.filter((row) => row.reading_id !== reading.id), next] });
+    const next = {
+      ...previous,
+      bible_complete: isConflictTaskGroupComplete(reading, 'bible', nextCompletedSet),
+      commentary_complete: isConflictTaskGroupComplete(reading, 'commentary', nextCompletedSet),
+    };
+    setData({ ...data, chapterProgress: nextChapterProgress, progress: [...data.progress.filter((row) => row.reading_id !== reading.id), next] });
     try {
-      const saved = await saveConflictProgress(session.user.id, reading, next);
-      setData((current) => current ? { ...current, progress: [...current.progress.filter((row) => row.reading_id !== reading.id), saved] } : current);
+      const savedChapterProgress = await saveConflictChapterProgress(session.user.id, nextChapterProgress);
+      setData((current) => current ? { ...current, chapterProgress: savedChapterProgress } : current);
     } catch (caught) {
       setData(data);
-      Alert.alert('Could not sync progress', caught instanceof Error ? caught.message : 'Please try again.');
+      Alert.alert('Could not sync chapter progress', caught instanceof Error ? caught.message : 'Please try again.');
+      return;
     }
+    saveConflictProgress(session.user.id, reading, next)
+      .then((saved) => setData((current) => current ? { ...current, progress: [...current.progress.filter((row) => row.reading_id !== reading.id), saved] } : current))
+      .catch(() => {});
   }
 
   async function openReading(kind: 'bible' | 'commentary', url: string) {
@@ -168,42 +188,44 @@ export default function ConflictJourneyScreen() {
 
   if (!data) return <View style={[styles.center, { paddingTop: insets.top }]}><Text style={styles.loading}>{error || 'Syncing your journey…'}</Text>{error ? <OutlineButton title="Try Again" onPress={load} /> : null}</View>;
 
-  const readingProgress = progressMap.get(reading.id);
   return <View style={[styles.page, { paddingTop: insets.top }]}>
     <View style={styles.header}><Pressable onPress={() => router.back()}><Text style={styles.back}>‹ Bible</Text></Pressable><Text style={styles.headerTitle}>Bible & Conflict</Text><Text style={[styles.sync, !session && styles.syncGuest]}>{session ? '● Synced' : 'View only'}</Text></View>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>{views.map((name) => <Pressable key={name} onPress={() => setView(name)} style={[styles.tab, view === name && styles.tabActive]}><Text style={[styles.tabText, view === name && styles.tabTextActive]}>{name}</Text></Pressable>)}</ScrollView>
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {!session ? <Card style={styles.guestBanner}><Text style={styles.guestTitle}>Viewing without an account</Text><Text style={styles.guestNote}>You can explore every reading. Progress, principles, cross-references, and discussion activity are saved only after you sign in.</Text><GoldButton title="Sign In to Save" loading={busy} onPress={authenticate} /></Card> : null}
-      {view === 'Readings' ? <ReadingsView canSave={Boolean(session)} onSignIn={authenticate} reading={reading} index={currentIndex} progress={readingProgress} principles={data.principles.filter((item) => item.reading_id === reading.id)} nextPrinciple={data.principles.reduce((max, item) => Math.max(max, item.principle_number), 0) + 1} completed={completed} principleBody={principleBody} crossRefs={crossRefs} busy={busy} onPrincipleBody={setPrincipleBody} onCrossRefs={setCrossRefs} onSavePrinciple={savePrinciple} onOpen={openReading} onToggle={toggleProgress} onPrevious={() => goToReading(currentIndex - 1)} onNext={() => goToReading(currentIndex + 1)} /> : null}
-      {view === 'Journey' ? <JourneyView progressMap={progressMap} openBook={openBook} setOpenBook={setOpenBook} goToReading={goToReading} /> : null}
-      {view === 'Progress' ? <ProgressView data={data} progressMap={progressMap} completed={completed} goToReading={goToReading} onShare={(principle) => { setSelectedPrincipleId(principle.id); setView('Members'); }} /> : null}
+      {view === 'Readings' ? <ReadingsView canSave={Boolean(session)} onSignIn={authenticate} reading={reading} index={currentIndex} chapterCompleted={chapterCompletedSet} principles={data.principles.filter((item) => item.reading_id === reading.id)} nextPrinciple={data.principles.reduce((max, item) => Math.max(max, item.principle_number), 0) + 1} completed={completed} principleBody={principleBody} crossRefs={crossRefs} busy={busy} onPrincipleBody={setPrincipleBody} onCrossRefs={setCrossRefs} onSavePrinciple={savePrinciple} onOpen={openReading} onToggleChapter={toggleChapter} onPrevious={() => goToReading(currentIndex - 1)} onNext={() => goToReading(currentIndex + 1)} /> : null}
+      {view === 'Journey' ? <JourneyView progressMap={progressMap} chapterCompleted={chapterCompletedSet} openBook={openBook} setOpenBook={setOpenBook} goToReading={goToReading} /> : null}
+      {view === 'Progress' ? <ProgressView data={data} progressMap={progressMap} chapterCompleted={chapterCompletedSet} completed={completed} goToReading={goToReading} onShare={(principle) => { setSelectedPrincipleId(principle.id); setView('Members'); }} /> : null}
       {view === 'Members' ? <MembersView canSave={Boolean(session)} onSignIn={authenticate} data={data} selectedPrincipleId={selectedPrincipleId} postBody={postBody} replyBodies={replyBodies} busy={busy} onSelectPrinciple={setSelectedPrincipleId} onPostBody={setPostBody} onShare={shareFinding} onReplyBody={(postId, body) => setReplyBodies((current) => ({ ...current, [postId]: body }))} onReply={replyTo} /> : null}
       <View style={{ height: 40 }} />
     </ScrollView>
   </View>;
 }
 
-function CheckRow({ checked, label, onPress }: { checked: boolean; label: string; onPress: () => void }) {
-  return <Pressable accessibilityRole="checkbox" accessibilityState={{ checked }} onPress={onPress} style={styles.checkRow}><View style={[styles.checkBox, checked && styles.checkBoxDone]}><Text style={styles.checkMark}>{checked ? '✓' : ''}</Text></View><Text style={styles.checkLabel}>{label}</Text></Pressable>;
+function ChapterTaskRow({ checked, label, kind, onToggle, onOpen }: { checked: boolean; label: string; kind: 'bible' | 'commentary'; onToggle: () => void; onOpen: () => void }) {
+  return <View style={styles.chapterRow}>
+    <Pressable accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={`Mark ${label.replace(/^Read\s+/i, '')} complete`} onPress={onToggle} style={[styles.checkBox, checked && styles.checkBoxDone]}><Text style={styles.checkMark}>{checked ? '✓' : ''}</Text></Pressable>
+    <Pressable onPress={onOpen} style={[styles.chapterButton, kind === 'bible' ? styles.chapterButtonBible : styles.chapterButtonCommentary]}><Text style={[styles.chapterButtonText, kind === 'commentary' && styles.chapterButtonTextCommentary]}>{label}</Text><Text style={[styles.chapterArrow, kind === 'commentary' && styles.chapterButtonTextCommentary]}>›</Text></Pressable>
+  </View>;
 }
 
-function ReadingsView(props: { canSave: boolean; onSignIn: () => void; reading: ConflictReading; index: number; progress?: ConflictProgress; principles: ConflictPrinciple[]; nextPrinciple: number; completed: number; principleBody: string; crossRefs: string; busy: boolean; onPrincipleBody: (value: string) => void; onCrossRefs: (value: string) => void; onSavePrinciple: () => void; onOpen: (kind: 'bible' | 'commentary', url: string) => void; onToggle: (field: 'bible_complete' | 'commentary_complete') => void; onPrevious: () => void; onNext: () => void }) {
-  const { reading, progress } = props;
+function ReadingsView(props: { canSave: boolean; onSignIn: () => void; reading: ConflictReading; index: number; chapterCompleted: ReadonlySet<number>; principles: ConflictPrinciple[]; nextPrinciple: number; completed: number; principleBody: string; crossRefs: string; busy: boolean; onPrincipleBody: (value: string) => void; onCrossRefs: (value: string) => void; onSavePrinciple: () => void; onOpen: (kind: 'bible' | 'commentary', url: string) => void; onToggleChapter: (kind: 'bible' | 'commentary', taskIndex: number) => void; onPrevious: () => void; onNext: () => void }) {
+  const { reading } = props;
   return <>
     <Eyebrow>READING {reading.day} OF {conflictPlan.readings.length}</Eyebrow><Text style={styles.title}>{reading.title}</Text><Text style={styles.subtitle}>Scripture comes first. The companion reading follows the same supplied pairing.</Text>
     <View style={styles.readingNav}><OutlineButton title="‹ Previous" onPress={props.onPrevious} disabled={props.index === 0} /><Text style={styles.percent}>{Math.round(props.completed / conflictPlan.readings.length * 100)}%</Text><OutlineButton title="Next ›" onPress={props.onNext} disabled={props.index === conflictPlan.readings.length - 1} /></View>
-    <Card style={styles.scriptureCard}><Eyebrow>THE BIBLE · READ FIRST</Eyebrow><Text style={styles.scriptureRef}>{reading.bibleReference || 'No Scripture passage listed'}</Text><Text style={styles.body}>{reading.bibleReference ? 'Choose one chapter at a time. Each link opens only that chapter or its assigned verses on Bible Gateway (KJV).' : 'This source entry contains only a companion assignment.'}</Text>{reading.bibleTasks.length ? <View style={styles.taskList}>{reading.bibleTasks.map((task) => <GoldButton key={`${task.book}-${task.chapter}`} title={task.label} onPress={() => props.onOpen('bible', task.url)} />)}</View> : <Text style={styles.review}>△ {reading.reviewNote ?? 'No Scripture reading was supplied.'}</Text>}{reading.bibleReference ? props.canSave ? <CheckRow checked={Boolean(progress?.bible_complete)} label="Scripture complete" onPress={() => props.onToggle('bible_complete')} /> : <OutlineButton title="Sign In to Save Progress" onPress={props.onSignIn} /> : null}</Card>
-    <Card><Eyebrow>CONFLICT OF THE AGES · COMPANION</Eyebrow><Text style={styles.cardTitle}>{reading.commentaryBook}</Text><Text style={styles.body}>{reading.commentaryCitation || 'No companion reading was listed.'}</Text>{reading.commentaryTasks.length ? <View style={styles.taskList}>{reading.commentaryTasks.map((task) => <OutlineButton key={`${task.paragraphId}`} title={task.label} onPress={() => props.onOpen('commentary', task.url)} />)}</View> : null}{reading.commentaryCitation ? props.canSave ? <CheckRow checked={Boolean(progress?.commentary_complete)} label="Companion complete" onPress={() => props.onToggle('commentary_complete')} /> : <OutlineButton title="Sign In to Save Progress" onPress={props.onSignIn} /> : null}{reading.reviewNote ? <Text style={styles.review}>△ {reading.reviewNote}</Text> : null}</Card>
+    <Card style={styles.scriptureCard}><Eyebrow>THE BIBLE · READ FIRST</Eyebrow><Text style={styles.scriptureRef}>{reading.bibleReference || 'No Scripture passage listed'}</Text><Text style={styles.body}>{reading.bibleReference ? 'Choose one chapter at a time. Each link opens only that chapter or its assigned verses on Bible Gateway (KJV).' : 'This source entry contains only a companion assignment.'}</Text>{reading.bibleTasks.length ? <View style={styles.taskList}>{reading.bibleTasks.map((task, taskIndex) => <ChapterTaskRow key={`${task.book}-${task.chapter}`} checked={props.chapterCompleted.has(conflictTaskProgressIndex(reading.id, 'bible', taskIndex))} label={task.label} kind="bible" onToggle={() => props.canSave ? props.onToggleChapter('bible', taskIndex) : props.onSignIn()} onOpen={() => props.onOpen('bible', task.url)} />)}</View> : <Text style={styles.review}>△ {reading.reviewNote ?? 'No Scripture reading was supplied.'}</Text>}</Card>
+    <Card><Eyebrow>CONFLICT OF THE AGES · COMPANION</Eyebrow><Text style={styles.cardTitle}>{reading.commentaryBook}</Text><Text style={styles.body}>{reading.commentaryCitation || 'No companion reading was listed.'}</Text>{reading.commentaryTasks.length ? <View style={styles.taskList}>{reading.commentaryTasks.map((task, taskIndex) => <ChapterTaskRow key={`${task.paragraphId}`} checked={props.chapterCompleted.has(conflictTaskProgressIndex(reading.id, 'commentary', taskIndex))} label={task.title ? `Read ${task.title}` : task.label} kind="commentary" onToggle={() => props.canSave ? props.onToggleChapter('commentary', taskIndex) : props.onSignIn()} onOpen={() => props.onOpen('commentary', task.url)} />)}</View> : null}{reading.reviewNote ? <Text style={styles.review}>△ {reading.reviewNote}</Text> : null}</Card>
     {props.canSave ? <Card style={styles.principleCard}><Eyebrow>YOUR PRIVATE DISCOVERY</Eyebrow><Text style={styles.cardTitle}>What principles do you see after this reading?</Text><Text style={styles.number}>PRINCIPLE #{props.nextPrinciple}</Text><TextInput value={props.principleBody} onChangeText={props.onPrincipleBody} placeholder="In my own words…" placeholderTextColor={colors.muted} multiline maxLength={2000} style={[styles.input, styles.multiline]} /><TextInput value={props.crossRefs} onChangeText={props.onCrossRefs} placeholder="Related numbers: 12, 19, 42" placeholderTextColor={colors.muted} keyboardType="number-pad" style={styles.input} /><GoldButton title="Save Principle" loading={props.busy} onPress={props.onSavePrinciple} />{props.principles.map((principle) => <View key={principle.id} style={styles.savedPrinciple}><Text style={styles.number}>PRINCIPLE #{principle.principle_number}</Text><Text style={styles.body}>{principle.body}</Text></View>)}</Card> : <Card style={styles.principleCard}><Eyebrow>YOUR PRIVATE DISCOVERY</Eyebrow><Text style={styles.cardTitle}>Save numbered principles and cross-references</Text><Text style={styles.body}>Sign in with Google when you want to save your own discoveries and connect them across readings.</Text><GoldButton title="Sign In to Save Principles" onPress={props.onSignIn} /></Card>}
   </>;
 }
 
-function JourneyView({ progressMap, openBook, setOpenBook, goToReading }: { progressMap: Map<string, ConflictProgress>; openBook: string; setOpenBook: (code: string) => void; goToReading: (index: number) => void }) {
-  return <><Eyebrow>THE COMPLETE STORY</Eyebrow><Text style={styles.title}>Your journey</Text><Text style={styles.subtitle}>All 265 supplied pairings, in their original order.</Text>{conflictPlan.books.map((book) => { const readings = conflictPlan.readings.filter((item) => item.code === book.code); const complete = readings.filter((item) => isConflictReadingComplete(item, progressMap.get(item.id))).length; const open = openBook === book.code; return <Card key={book.code} style={styles.bookCard}><Pressable onPress={() => setOpenBook(open ? '' : book.code)} style={styles.bookHeader}><View style={styles.bookBadge}><Text style={styles.bookBadgeText}>{book.code}</Text></View><View style={{ flex: 1 }}><Text style={styles.cardTitle}>{book.title}</Text><Text style={styles.meta}>{complete}/{readings.length} complete</Text></View><Text style={styles.gold}>{open ? '−' : '+'}</Text></Pressable>{open ? readings.map((item) => <Pressable key={item.id} onPress={() => goToReading(item.day - 1)} style={styles.journeyRow}><Text style={[styles.journeyCheck, isConflictReadingComplete(item, progressMap.get(item.id)) && styles.journeyCheckDone]}>{isConflictReadingComplete(item, progressMap.get(item.id)) ? '✓' : ''}</Text><View style={{ flex: 1 }}><Text style={styles.rowTitle}>Reading {item.day} · {item.title}</Text><Text style={styles.meta}>{item.bibleReference || item.commentaryCitation}</Text></View></Pressable>) : null}</Card>; })}</>;
+function JourneyView({ progressMap, chapterCompleted, openBook, setOpenBook, goToReading }: { progressMap: Map<string, ConflictProgress>; chapterCompleted: ReadonlySet<number>; openBook: string; setOpenBook: (code: string) => void; goToReading: (index: number) => void }) {
+  return <><Eyebrow>THE COMPLETE STORY</Eyebrow><Text style={styles.title}>Your journey</Text><Text style={styles.subtitle}>All 265 supplied pairings, in their original order.</Text>{conflictPlan.books.map((book) => { const readings = conflictPlan.readings.filter((item) => item.code === book.code); const complete = readings.filter((item) => isConflictReadingComplete(item, progressMap.get(item.id), chapterCompleted)).length; const open = openBook === book.code; return <Card key={book.code} style={styles.bookCard}><Pressable onPress={() => setOpenBook(open ? '' : book.code)} style={styles.bookHeader}><View style={styles.bookBadge}><Text style={styles.bookBadgeText}>{book.code}</Text></View><View style={{ flex: 1 }}><Text style={styles.cardTitle}>{book.title}</Text><Text style={styles.meta}>{complete}/{readings.length} complete</Text></View><Text style={styles.gold}>{open ? '−' : '+'}</Text></Pressable>{open ? readings.map((item) => { const done = isConflictReadingComplete(item, progressMap.get(item.id), chapterCompleted); return <Pressable key={item.id} onPress={() => goToReading(item.day - 1)} style={styles.journeyRow}><Text style={[styles.journeyCheck, done && styles.journeyCheckDone]}>{done ? '✓' : ''}</Text><View style={{ flex: 1 }}><Text style={styles.rowTitle}>Reading {item.day} · {item.title}</Text><Text style={styles.meta}>{item.bibleReference || item.commentaryCitation}</Text></View></Pressable>; }) : null}</Card>; })}</>;
 }
 
-function ProgressView({ data, progressMap, completed, goToReading, onShare }: { data: ConflictMemberData; progressMap: Map<string, ConflictProgress>; completed: number; goToReading: (index: number) => void; onShare: (principle: ConflictPrinciple) => void }) {
-  return <><Eyebrow>EVERY DISCOVERY IN ONE PLACE</Eyebrow><Text style={styles.title}>Progress & principles</Text><View style={styles.stats}><Card style={styles.stat}><Text style={styles.statNumber}>{Math.round(completed / conflictPlan.readings.length * 100)}%</Text><Text style={styles.meta}>JOURNEY COMPLETE</Text></Card><Card style={styles.stat}><Text style={styles.statNumber}>{data.principles.length}</Text><Text style={styles.meta}>PRINCIPLES</Text></Card></View>{conflictPlan.books.map((book) => { const readings = conflictPlan.readings.filter((item) => item.code === book.code); const count = readings.filter((item) => isConflictReadingComplete(item, progressMap.get(item.id))).length; return <View key={book.code} style={styles.progressRow}><Text style={styles.rowTitle}>{book.shortTitle}</Text><Text style={styles.meta}>{count}/{readings.length}</Text></View>; })}<Text style={styles.sectionTitle}>My principle index</Text>{data.principles.length ? data.principles.map((principle) => { const index = conflictPlan.readings.findIndex((item) => item.id === principle.reading_id); return <Card key={principle.id}><Text style={styles.number}>PRINCIPLE #{principle.principle_number} · READING {index + 1}</Text><Text style={styles.body}>{principle.body}</Text>{principle.cross_reference_numbers.length ? <Text style={styles.meta}>RELATED: {principle.cross_reference_numbers.map((number) => `#${number}`).join(', ')}</Text> : null}<View style={styles.smallActions}><OutlineButton title="Open Reading" onPress={() => goToReading(index)} /><OutlineButton title="Share" onPress={() => onShare(principle)} /></View></Card>; }) : <Card><Text style={styles.body}>Your numbered principles will appear here.</Text></Card>}</>;
+function ProgressView({ data, progressMap, chapterCompleted, completed, goToReading, onShare }: { data: ConflictMemberData; progressMap: Map<string, ConflictProgress>; chapterCompleted: ReadonlySet<number>; completed: number; goToReading: (index: number) => void; onShare: (principle: ConflictPrinciple) => void }) {
+  return <><Eyebrow>EVERY DISCOVERY IN ONE PLACE</Eyebrow><Text style={styles.title}>Progress & principles</Text><View style={styles.stats}><Card style={styles.stat}><Text style={styles.statNumber}>{Math.round(completed / conflictPlan.readings.length * 100)}%</Text><Text style={styles.meta}>JOURNEY COMPLETE</Text></Card><Card style={styles.stat}><Text style={styles.statNumber}>{data.principles.length}</Text><Text style={styles.meta}>PRINCIPLES</Text></Card></View>{conflictPlan.books.map((book) => { const readings = conflictPlan.readings.filter((item) => item.code === book.code); const count = readings.filter((item) => isConflictReadingComplete(item, progressMap.get(item.id), chapterCompleted)).length; return <View key={book.code} style={styles.progressRow}><Text style={styles.rowTitle}>{book.shortTitle}</Text><Text style={styles.meta}>{count}/{readings.length}</Text></View>; })}<Text style={styles.sectionTitle}>My principle index</Text>{data.principles.length ? data.principles.map((principle) => { const index = conflictPlan.readings.findIndex((item) => item.id === principle.reading_id); return <Card key={principle.id}><Text style={styles.number}>PRINCIPLE #{principle.principle_number} · READING {index + 1}</Text><Text style={styles.body}>{principle.body}</Text>{principle.cross_reference_numbers.length ? <Text style={styles.meta}>RELATED: {principle.cross_reference_numbers.map((number) => `#${number}`).join(', ')}</Text> : null}<View style={styles.smallActions}><OutlineButton title="Open Reading" onPress={() => goToReading(index)} /><OutlineButton title="Share" onPress={() => onShare(principle)} /></View></Card>; }) : <Card><Text style={styles.body}>Your numbered principles will appear here.</Text></Card>}</>;
 }
 
 function MembersView({ canSave, onSignIn, data, selectedPrincipleId, postBody, replyBodies, busy, onSelectPrinciple, onPostBody, onShare, onReplyBody, onReply }: { canSave: boolean; onSignIn: () => void; data: ConflictMemberData; selectedPrincipleId: string; postBody: string; replyBodies: Record<string, string>; busy: boolean; onSelectPrinciple: (id: string) => void; onPostBody: (body: string) => void; onShare: () => void; onReplyBody: (postId: string, body: string) => void; onReply: (post: ConflictPost) => void }) {
@@ -216,7 +238,7 @@ const styles = StyleSheet.create({
   header:{minHeight:52,paddingHorizontal:18,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderBottomWidth:1,borderBottomColor:colors.border},back:{color:colors.gold,fontWeight:'900',fontSize:14},headerTitle:{color:colors.text,fontWeight:'900',fontSize:15},sync:{color:colors.green,fontSize:9,fontWeight:'800'},syncGuest:{color:colors.gold},
   tabs:{paddingHorizontal:12,paddingVertical:10,gap:7},tab:{paddingHorizontal:15,paddingVertical:10,borderRadius:999,backgroundColor:colors.panel},tabActive:{backgroundColor:colors.gold},tabText:{color:colors.muted,fontSize:10,fontWeight:'800'},tabTextActive:{color:colors.charcoal},
   title:{color:colors.text,fontSize:34,fontWeight:'900',lineHeight:39},subtitle:{color:colors.muted,fontSize:13,lineHeight:20,marginBottom:5},sectionTitle:{color:colors.text,fontSize:24,fontWeight:'900',marginTop:18},cardTitle:{color:colors.text,fontSize:21,fontWeight:'900',lineHeight:27,marginBottom:7},body:{color:colors.ivory,fontSize:13,lineHeight:21,marginBottom:12},meta:{color:colors.muted,fontSize:10,lineHeight:15},gold:{color:colors.gold,fontSize:28,fontWeight:'900'},muted:{color:colors.muted},
-  readingNav:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},percent:{color:colors.gold,fontWeight:'900'},scriptureCard:{backgroundColor:colors.plum,padding:22},scriptureRef:{color:colors.text,fontSize:31,fontWeight:'900',lineHeight:37,marginBottom:12},taskList:{gap:8,marginBottom:6},review:{color:'#ffb9b3',fontSize:11,lineHeight:17,marginTop:14},checkRow:{flexDirection:'row',alignItems:'center',gap:10,marginTop:14},checkBox:{width:27,height:27,borderRadius:8,borderWidth:1,borderColor:colors.gold,alignItems:'center',justifyContent:'center'},checkBoxDone:{backgroundColor:colors.green,borderColor:colors.green},checkMark:{color:colors.charcoal,fontWeight:'900'},checkLabel:{color:colors.ivory,fontSize:12,fontWeight:'800'},
+  readingNav:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},percent:{color:colors.gold,fontWeight:'900'},scriptureCard:{backgroundColor:colors.plum,padding:22},scriptureRef:{color:colors.text,fontSize:31,fontWeight:'900',lineHeight:37,marginBottom:12},taskList:{gap:8,marginBottom:6},review:{color:'#ffb9b3',fontSize:11,lineHeight:17,marginTop:14},chapterRow:{flexDirection:'row',alignItems:'center',gap:9},checkBox:{width:27,height:27,borderRadius:8,borderWidth:1,borderColor:colors.gold,alignItems:'center',justifyContent:'center',flexShrink:0},checkBoxDone:{backgroundColor:colors.green,borderColor:colors.green},checkMark:{color:colors.charcoal,fontWeight:'900'},chapterButton:{minHeight:48,flex:1,borderRadius:13,paddingHorizontal:14,paddingVertical:10,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderWidth:1},chapterButtonBible:{backgroundColor:colors.gold,borderColor:colors.gold},chapterButtonCommentary:{backgroundColor:'transparent',borderColor:colors.gold},chapterButtonText:{color:colors.charcoal,fontSize:13,fontWeight:'900',lineHeight:18,flex:1},chapterButtonTextCommentary:{color:colors.ivory},chapterArrow:{color:colors.charcoal,fontSize:24,lineHeight:24,marginLeft:8},
   principleCard:{backgroundColor:colors.panel2},number:{color:colors.gold,fontSize:10,fontWeight:'900',letterSpacing:1.2,marginBottom:8},input:{borderWidth:1,borderColor:colors.border,borderRadius:13,backgroundColor:colors.panel,color:colors.text,padding:13,fontSize:13,marginBottom:10},multiline:{minHeight:120,textAlignVertical:'top'},savedPrinciple:{marginTop:12,padding:13,borderRadius:13,backgroundColor:colors.panel},
   bookCard:{padding:0,overflow:'hidden'},bookHeader:{padding:16,flexDirection:'row',alignItems:'center',gap:12},bookBadge:{width:44,height:44,borderRadius:22,backgroundColor:colors.plum,alignItems:'center',justifyContent:'center'},bookBadgeText:{color:colors.gold,fontWeight:'900'},journeyRow:{padding:13,borderTopWidth:1,borderTopColor:colors.border,flexDirection:'row',alignItems:'center',gap:10},journeyCheck:{width:28,height:28,borderWidth:1,borderColor:colors.border,borderRadius:8,textAlign:'center',textAlignVertical:'center',color:colors.charcoal},journeyCheckDone:{backgroundColor:colors.green,borderColor:colors.green},rowTitle:{color:colors.text,fontSize:12,fontWeight:'900',lineHeight:17},
   stats:{flexDirection:'row',gap:10},stat:{flex:1},statNumber:{color:colors.gold,fontSize:34,fontWeight:'900'},progressRow:{paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border,flexDirection:'row',justifyContent:'space-between'},smallActions:{gap:8},
