@@ -1,266 +1,44 @@
+import planData from './chronologicalBiblePlan.json';
+
+export type ChronologicalChapterTask = {
+  label: string;
+  url: string;
+};
+
 export type ChronologicalReading = {
-  id: number;
+  id: string;
+  index: number;
+  number: number;
   section: string;
+  title: string;
   reference: string;
+  sourceNumber: number;
+  sourceReference: string;
+  partNumber: number;
+  partCount: number;
+  bibleTasks: ChronologicalChapterTask[];
+  reviewNote: string | null;
 };
 
 export type ChronologicalSection = {
+  id: string;
+  number: number;
   title: string;
+  readingCount: number;
   readings: ChronologicalReading[];
 };
 
-const source: [string, string[]][] = [
-  ['The Beginning', [
-    'Job (1st two chapters and last chapter)',
-    'Genesis 1-11',
-  ]],
-  ['Abraham & Family', [
-    'Genesis 12-50',
-  ]],
-  ['Moses & Israel', [
-    'Exodus',
-    'Leviticus',
-    'Numbers; Psalm 90',
-    'Deuteronomy; Psalm 91',
-  ]],
-  ['Israel Before It Had Kings', [
-    'Joshua',
-    'Judges',
-    'Ruth',
-  ]],
-  ['Israel With Kings', [
-    '1 Samuel 1-20; Psalm 11, 59',
-    '1 Samuel 21-24; Psalm 7, 27, 31, 34, 52, 56, 120, 140-142',
-    '1 Samuel 25-27; Psalm 17, 35, 54, 63',
-    '1 Samuel 28-31; Psalm 18, 121, 123-125, 128-130',
-    '2 Samuel 1-4; Psalm 6, 8-10, 14, 16, 19, 21',
-    '1 Chronicles 1-2; Psalm 43-45, 49, 84-85, 87',
-    '1 Chronicles 3-5; Psalm 73, 77-78',
-    '1 Chronicles 6; Psalm 81, 88, 92-93',
-    '1 Chronicles 7-10; Psalm 102-104',
-    '2 Samuel 5:1-10; 1 Chronicles 11-12; Psalm 133, 106-107',
-    '2 Samuel 5:11-25, 6:1-23; 1 Chronicles 13-16; Psalm 1-2, 15, 22-24, 47, 68, 89, 96, 100, 101, 105, 132',
-    '2 Samuel 7; 1 Chronicles 17; Psalm 25, 29, 33, 36, 39',
-    '2 Samuel 8-9; 1 Chronicles 18; Psalm 50, 53, 60, 75',
-    '2 Samuel 10; 1 Chronicles 19; Psalm 20, 65-67, 69-70',
-    '2 Samuel 11-12; 1 Chronicles 20; Psalm 32, 51, 86, 122',
-    '2 Samuel 13-15; Psalm 3-4, 12-13, 28, 55',
-    '2 Samuel 16-18; Psalm 26, 40, 58, 61-62, 64',
-    '2 Samuel 19-21; Psalm 5, 38, 41-42',
-    '2 Samuel 22-23; Psalm 57, 95, 97-99',
-    '2 Samuel 24; 1 Chronicles 21-22; Psalm 30, 108-110',
-    '1 Chronicles 23-25; Psalm 131, 138-139, 143-145',
-    '1 Chronicles 26-29; Psalm 127, 111-118',
-    '1 Kings 1-2; Psalm 37, 71, 94, 119:1-88',
-    '1 Kings 3-4; 2 Chronicles 1; Psalm 72, 119:89-176',
-    'Song of Solomon 1-8',
-    'Proverbs 1-24',
-    '1 Kings 5-6; 2 Chronicles 2-3',
-    '1 Kings 7; 2 Chronicles 4',
-    '1 Kings 8; 2 Chronicles 5',
-    '2 Chronicles 6-7; Psalm 136, 134, 146-150',
-    '1 Kings 9; 2 Chronicles 8',
-    'Proverbs 25-29',
-    'Ecclesiastes',
-    '1 Kings 10-11; 2 Chronicles 9',
-    'Proverbs 30-31',
-  ]],
-  ['Israel Split Into Two: Israel (10 northern tribes) and Judah (3 southern tribes)', [
-    '1 Kings 12-14; 2 Chronicles 10-12',
-    '1 Kings 15:1-24; 2 Chronicles 13-16',
-    '1 Kings 15:25-34; 1 Kings 16:1-34; 2 Chronicles 17',
-    '1 Kings 17-22; 2 Chronicles 18-23',
-    'Obadiah; Psalm 82-83',
-    '2 Kings 1-8-13; 2 Chronicles 24',
-    '2 Kings 14; 2 Chronicles 25',
-    'Jonah',
-    '2 Kings 15; 2 Chronicles 26',
-    'Isaiah 1-8',
-    'Amos',
-    '2 Chronicles 27; Isaiah 9-12',
-    'Micah',
-  ]],
-  ['Assyria Destroys and Scatters Israel (northern tribes)', [
-    '2 Chronicles 28; 2 Kings 16-17',
-    'Isaiah 13-27',
-    '2 Kings 18:1-8; 2 Chronicles 29-31; Psalm 48',
-    'Hosea',
-    'Isaiah 28-39; Psalm 76',
-    'Isaiah 40-48',
-    '2 Kings 18:9-37; 2 Kings 19:1-37; Psalm 46, 80, 135',
-    'Isaiah 49-66',
-    '2 Kings 20-21; 2 Chronicles 32-33',
-    'Nahum',
-    '2 Kings 22-23; 2 Chronicles 34-35',
-    'Zephaniah',
-    'Jeremiah 1-40; Psalm 74, 79',
-    '2 Kings 24-25; 2 Chronicles 36',
-    'Habakkuk',
-    'Jeremiah 41-52',
-    'Lamentations',
-    'Ezekiel',
-    'Joel',
-  ]],
-  ['Babylon Destroys Jerusalem and Occupies Judah (southern tribes)', [
-    'Daniel',
-  ]],
-  ['Persia Restores Jerusalem to the Jews (southern tribes)', [
-    'Ezra; Psalm 137',
-    'Haggai',
-    'Zechariah',
-    'Esther',
-    'Nehemiah; Psalm 126',
-    'Malachi',
-  ]],
-  ['Jesus, the Fulfillment of the Old Testament', [
-    'Luke 1; John 1:1-14',
-    'Matthew 1; Luke 2:1-38',
-    'Matthew 2; Luke 2:39-52',
-    'Matthew 3; Mark 1; Luke 3',
-    'Matthew 4; Luke 4-5; John 1:15-51',
-    'John 2-4',
-    'Mark 2',
-    'John 5',
-    'Matthew 12:1-21; Mark 3; Luke 6',
-    'Matthew 5-8:1-13; Luke 7',
-    'Matthew 11-12:22-50; Luke 11',
-    'Matthew 13; Luke 8',
-    'Matthew 8:14-34; Mark 4-5',
-    'Matthew 9-10, 14; Mark 6; Luke 9:1-17',
-    'John 6',
-    'Matthew 15; Mark 7',
-    'Matthew 16; Mark 8; Luke 9:18-27',
-    'Matthew 17; Mark 9; Luke 9:28-62',
-    'Matthew 18',
-    'John 7-9:1-41; John 10:1-21',
-    'Luke 10-11; John 10:22-42',
-    'Luke 12-16; Luke 17:1-10',
-    'John 11',
-    'Luke 17:11-37; Luke 18:1-14',
-    'Matthew 19; Mark 10',
-    'Matthew 20-21',
-    'Luke 18:15-43; Luke 19:1-48',
-    'Mark 11; John 12',
-    'Matthew 22; Mark 12',
-    'Matthew 23; Luke 20-21',
-    'Mark 13',
-    'Matthew 24-26; Mark 14',
-    'Luke 22; John 13',
-    'John 14-17',
-    'Matthew 27; Mark 15',
-    'Luke 23; John 18-19',
-    'Matthew 28; Mark 16',
-    'Luke 24; John 20-21',
-  ]],
-  ['The Disciples Spread the Gospel to the World', [
-    'Acts 1-14',
-    'James',
-    'Acts 15-16',
-    'Galatians',
-    'Acts 17-18:18',
-    '1 Thessalonians',
-    '2 Thessalonians',
-    'Acts 18:19-19',
-    '1 Corinthians',
-    '2 Corinthians',
-    'Acts 20:1-3',
-    'Romans 1-16',
-    'Acts 20-28',
-    'Colossians',
-    'Philemon',
-    'Ephesians',
-    'Philippians',
-    '1 Timothy',
-    'Titus',
-    '1 Peter',
-    'Hebrews',
-    '2 Timothy',
-    '2 Peter',
-    'Jude',
-    '1 John',
-    '2 John',
-    '3 John',
-    'Revelation',
-  ]],
-];
+export const chronologicalReadings = planData.readings as ChronologicalReading[];
 
-let counter = 0;
-
-export const chronologicalBiblePlan: ChronologicalSection[] = source.map(([title, references]) => ({
-  title,
-  readings: references.map((reference) => ({ id: counter++, section: title, reference })),
+export const chronologicalBiblePlan: ChronologicalSection[] = planData.sections.map((section) => ({
+  ...section,
+  readings: chronologicalReadings.filter((reading) => reading.section === section.title),
 }));
 
-export const chronologicalReadings = chronologicalBiblePlan.flatMap((section) => section.readings);
-
-export function bibleGatewayUrl(reference: string) {
-  return `https://www.biblegateway.com/passage/?search=${encodeURIComponent(reference)}`;
-}
-
-const bookChapterCounts: Record<string, number> = {
-  Genesis: 50, Exodus: 40, Leviticus: 27, Numbers: 36, Deuteronomy: 34,
-  Joshua: 24, Judges: 21, Ruth: 4, '1 Samuel': 31, '2 Samuel': 24,
-  '1 Kings': 22, '2 Kings': 25, '1 Chronicles': 29, '2 Chronicles': 36,
-  Ezra: 10, Nehemiah: 13, Esther: 10, Job: 42, Psalm: 150,
-  Proverbs: 31, Ecclesiastes: 12, 'Song of Solomon': 8, Isaiah: 66,
-  Jeremiah: 52, Lamentations: 5, Ezekiel: 48, Daniel: 12, Hosea: 14,
-  Joel: 3, Amos: 9, Obadiah: 1, Jonah: 4, Micah: 7, Nahum: 3,
-  Habakkuk: 3, Zephaniah: 3, Haggai: 2, Zechariah: 14, Malachi: 4,
-  Matthew: 28, Mark: 16, Luke: 24, John: 21, Acts: 28, Romans: 16,
-  '1 Corinthians': 16, '2 Corinthians': 13, Galatians: 6, Ephesians: 6,
-  Philippians: 4, Colossians: 4, '1 Thessalonians': 5, '2 Thessalonians': 3,
-  '1 Timothy': 6, '2 Timothy': 4, Titus: 3, Philemon: 1, Hebrews: 13,
-  James: 5, '1 Peter': 5, '2 Peter': 3, '1 John': 5, '2 John': 1,
-  '3 John': 1, Jude: 1, Revelation: 22,
+export const chronologicalPlanMeta = {
+  planId: planData.planId,
+  legacyPlanId: planData.legacyPlanId,
+  legacyMigration: planData.legacyMigration as Record<string, number[]>,
+  originalReadingCount: planData.originalReadingCount,
+  readingCount: planData.readingCount,
 };
-
-const bookNames = Object.keys(bookChapterCounts).sort((a, b) => b.length - a.length);
-
-function chapterRange(book: string, start: number, end: number) {
-  const lastChapter = bookChapterCounts[book];
-  const first = Math.max(1, Math.min(start, lastChapter));
-  const last = Math.max(first, Math.min(end, lastChapter));
-  return Array.from({ length: last - first + 1 }, (_, index) => `${book} ${first + index}`);
-}
-
-/** Converts a grouped plan entry into Bible Gateway links for one chapter at a time. */
-export function expandReadingChapters(reference: string) {
-  if (reference === 'Job (1st two chapters and last chapter)') {
-    return ['Job 1', 'Job 2', 'Job 42'];
-  }
-
-  const chapters: string[] = [];
-
-  for (const clause of reference.split(';')) {
-    const part = clause.trim();
-    const book = bookNames.find((name) => part === name || part.startsWith(`${name} `));
-    if (!book) continue;
-
-    const specification = part.slice(book.length).trim();
-    if (!specification) {
-      chapters.push(...chapterRange(book, 1, bookChapterCounts[book]));
-      continue;
-    }
-
-    for (const token of specification.split(',').map((value) => value.trim())) {
-      if (book === 'Acts' && token === '18:19-19') {
-        chapters.push('Acts 18', 'Acts 19');
-        continue;
-      }
-
-      const chapterRangeMatch = token.match(/^(\d+)-(\d+)(?::.*)?$/);
-      const malformedChapterRangeMatch = token.match(/^(\d+)-\d+-(\d+)$/);
-      const singleChapterMatch = token.match(/^(\d+)(?::.*)?$/);
-
-      if (malformedChapterRangeMatch) {
-        chapters.push(...chapterRange(book, Number(malformedChapterRangeMatch[1]), Number(malformedChapterRangeMatch[2])));
-      } else if (chapterRangeMatch) {
-        chapters.push(...chapterRange(book, Number(chapterRangeMatch[1]), Number(chapterRangeMatch[2])));
-      } else if (singleChapterMatch) {
-        chapters.push(`${book} ${Number(singleChapterMatch[1])}`);
-      }
-    }
-  }
-
-  return [...new Set(chapters)];
-}
