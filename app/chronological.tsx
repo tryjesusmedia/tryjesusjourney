@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { JourneyLeaderboardModal } from '@/components/JourneyLeaderboardModal';
+import { JourneyStatusCard } from '@/components/JourneyStatusCard';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
 import { colors } from '@/constants/theme';
 import {
@@ -36,6 +38,8 @@ import {
   saveChronologicalProgress,
   type ChronologicalProgress,
 } from '@/lib/chronologicalProgress';
+import { summarizeJourneyRewards } from '@/lib/journeyRewardsCore';
+import { useJourneyProfile } from '@/lib/useJourneyProfile';
 type ChronologicalListItem =
   | { kind: 'section'; section: ChronologicalSection }
   | { kind: 'reading'; reading: ChronologicalReading; searchResult?: boolean }
@@ -58,6 +62,8 @@ export default function ChronologicalBibleScreen() {
   const [query, setQuery] = useState('');
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(chronologicalBiblePlan[0]?.id ?? null);
   const [expandedReadingId, setExpandedReadingId] = useState<string | null>(null);
+  const [leaderboardVisible, setLeaderboardVisible] = useState(false);
+  const journeyProfile = useJourneyProfile(sessionUserId);
 
   useFocusEffect(useCallback(() => {
     const generation = ++loadGenerationRef.current;
@@ -96,6 +102,7 @@ export default function ChronologicalBibleScreen() {
   }, [authIdentity, authLoading, sessionUserId]));
 
   const completedSet = useMemo(() => new Set(progress.completed), [progress.completed]);
+  const journeyRewards = useMemo(() => summarizeJourneyRewards(progress.completed), [progress.completed]);
   const percent = Math.round((progress.completed.length / chronologicalPlanMeta.chapterCount) * 100);
   const normalizedQuery = query.trim().toLowerCase();
   const searchResults = useMemo(() => {
@@ -235,11 +242,20 @@ export default function ChronologicalBibleScreen() {
           <Text style={styles.resultSummaryTitle}>{searchResults.length} search result{searchResults.length === 1 ? '' : 's'}</Text>
         </View>
       ) : (
-        <Card style={styles.progressCard}>
-          <View style={styles.progressHeading}><View><Eyebrow>YOUR PROGRESS</Eyebrow><Text style={styles.progressNumber}>{percent}% complete</Text></View><Text style={styles.progressCount}>{progress.completed.length}/{chronologicalPlanMeta.chapterCount}</Text></View>
-          <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${percent}%` }]} /></View>
-          <GoldButton title="Continue Reading" onPress={continueReading} />
-        </Card>
+        <>
+          <Card style={styles.progressCard}>
+            <View style={styles.progressHeading}><View><Eyebrow>YOUR PROGRESS</Eyebrow><Text style={styles.progressNumber}>{percent}% complete</Text></View><Text style={styles.progressCount}>{progress.completed.length}/{chronologicalPlanMeta.chapterCount}</Text></View>
+            <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${percent}%` }]} /></View>
+            <GoldButton title="Continue Reading" onPress={continueReading} />
+          </Card>
+          <JourneyStatusCard
+            summary={journeyRewards}
+            signedIn={Boolean(sessionUserId)}
+            alias={journeyProfile.alias}
+            aliasLoading={journeyProfile.loading}
+            onOpenLeaderboard={() => setLeaderboardVisible(true)}
+          />
+        </>
       )}
     </View>
   );
@@ -301,6 +317,20 @@ export default function ChronologicalBibleScreen() {
             })}</View> : null}
           </Card>;
         }}
+      />
+      <JourneyLeaderboardModal
+        key={sessionUserId ?? 'guest'}
+        visible={leaderboardVisible}
+        signedIn={Boolean(sessionUserId)}
+        alias={journeyProfile.alias}
+        aliasLoading={journeyProfile.loading}
+        aliasError={journeyProfile.error}
+        aliasRerolling={journeyProfile.rerolling}
+        signInBusy={syncBusy || authLoading}
+        onRequestClose={() => setLeaderboardVisible(false)}
+        onSignIn={connectGoogle}
+        onRetryAlias={journeyProfile.refresh}
+        onChangeAlias={journeyProfile.changeAlias}
       />
     </KeyboardAvoidingView>
   );

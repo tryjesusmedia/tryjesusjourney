@@ -15,7 +15,8 @@
     "test:home-guide-ui": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-home-guide-ui.mjs",
     "test:journal-ask-ui": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-journal-ask-ui.mjs",
     "test:guide-reader-ui": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-guide-reader-ui.mjs",
-    "test:bible-reader": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-bible-reader.mjs"
+    "test:bible-reader": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-bible-reader.mjs",
+    "test:journey-rewards": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-journey-rewards.mjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
