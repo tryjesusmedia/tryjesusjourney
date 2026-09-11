@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
@@ -47,9 +47,11 @@ export default function BibleReaderScreen() {
   const [translation, setTranslation] = useState<BibleTranslation>(initialTranslation);
   const [pendingSelection, setPendingSelection] = useState<PendingSelection | null>(null);
   const [selectionBusy, setSelectionBusy] = useState(false);
+  const [savedColor, setSavedColor] = useState<HighlightColor | null>(null);
   const [notesVisible, setNotesVisible] = useState(false);
   const [selectedHighlightId, setSelectedHighlightId] = useState<string | null>(null);
   const lastScrollY = useRef(0);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const webRef = useRef<WebView>(null);
   const { highlights, ready, create, update, remove } = useBibleHighlights();
   const sections = useMemo(() => getBiblePassage(reference, translation), [reference, translation]);
@@ -58,11 +60,20 @@ export default function BibleReaderScreen() {
     highlight.translation === translation && visibleChapterLabels.has(highlight.chapterLabel)
   )), [highlights, translation, visibleChapterLabels]);
   const html = useMemo(() => bibleReaderHtml(sections, visibleHighlights), [sections, visibleHighlights]);
+  const webSource = useMemo(() => ({ html }), [html]);
+
+  useEffect(() => () => {
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+  }, []);
 
   function handleMessage(event: WebViewMessageEvent) {
     try {
       const message = JSON.parse(event.nativeEvent.data) as ReaderMessage;
-      if (typeof message.scrollY === 'number') lastScrollY.current = Math.max(0, message.scrollY);
+      // A newly loaded document reports ready at y=0 before we restore the reader.
+      // Keep the position captured by the selection/scroll message instead.
+      if (typeof message.scrollY === 'number' && message.type !== 'ready') {
+        lastScrollY.current = Math.max(0, message.scrollY);
+      }
       if (message.type === 'dismiss-selection') setPendingSelection(null);
       if (message.type === 'open-highlight' && message.id) {
         setPendingSelection(null);
@@ -128,6 +139,13 @@ export default function BibleReaderScreen() {
         color,
       });
       setPendingSelection(null);
+      webRef.current?.injectJavaScript('window.getSelection()?.removeAllRanges(); true;');
+      setSavedColor(color);
+      if (savedTimer.current) clearTimeout(savedTimer.current);
+      savedTimer.current = setTimeout(() => {
+        setSavedColor(null);
+        savedTimer.current = null;
+      }, 1800);
     } catch (caught) {
       Alert.alert('Could not save highlight', caught instanceof Error ? caught.message : 'Please try again.');
     } finally {
@@ -168,7 +186,7 @@ export default function BibleReaderScreen() {
       <WebView
         ref={webRef}
         originWhitelist={['*']}
-        source={{ html }}
+        source={webSource}
         style={styles.web}
         onMessage={handleMessage}
         javaScriptEnabled
@@ -177,7 +195,10 @@ export default function BibleReaderScreen() {
         showsHorizontalScrollIndicator={false}
         onLoadEnd={() => {
           const y = Math.max(0, Math.round(lastScrollY.current));
-          webRef.current?.injectJavaScript(`window.scrollTo(0, ${y}); true;`);
+          webRef.current?.injectJavaScript(`requestAnimationFrame(() => {
+            window.scrollTo(0, ${y});
+            setTimeout(() => window.scrollTo(0, ${y}), 50);
+          }); true;`);
         }}
         onShouldStartLoadWithRequest={(request) => request.url === 'about:blank'}
       />
@@ -191,7 +212,8 @@ export default function BibleReaderScreen() {
 
       {pendingSelection && ready ? (
         <View style={[styles.palette, { bottom: Math.max(insets.bottom, 12) + 70 }]}>
-          <Text style={styles.paletteLabel}>{selectionBusy ? 'SAVING…' : 'CHOOSE A HIGHLIGHT COLOR'}</Text>
+          <Text style={styles.paletteLabel}>{selectionBusy ? 'SAVING HIGHLIGHT…' : 'TAP A COLOR TO HIGHLIGHT'}</Text>
+          <Text numberOfLines={1} style={styles.paletteSelection}>“{pendingSelection.selectedText}”</Text>
           <View style={styles.paletteColors}>
             {HIGHLIGHT_COLORS.map((color) => (
               <Pressable
@@ -205,6 +227,17 @@ export default function BibleReaderScreen() {
             ))}
           </View>
           {selectionBusy ? <ActivityIndicator color={colors.gold} style={styles.paletteBusy} /> : null}
+        </View>
+      ) : null}
+
+      {savedColor ? (
+        <View
+          accessibilityLiveRegion="polite"
+          accessibilityRole="alert"
+          style={[styles.savedToast, { bottom: Math.max(insets.bottom, 12) + 70 }]}
+        >
+          <View style={[styles.savedDot, { backgroundColor: HIGHLIGHT_COLOR_HEX[savedColor] }]} />
+          <Text style={styles.savedText}>Highlight saved</Text>
         </View>
       ) : null}
 
@@ -243,9 +276,13 @@ const styles = StyleSheet.create({
   web: { flex: 1, backgroundColor: '#F7F0E2' },
   highlightsLoading: { position: 'absolute', zIndex: 45, elevation: 16, left: 16, right: 16, top: 84, minHeight: 52, borderRadius: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border },
   highlightsLoadingText: { color: colors.ivory, fontSize: 12, fontWeight: '800' },
-  palette: { position: 'absolute', zIndex: 60, elevation: 24, left: 16, right: 16, minHeight: 67, borderRadius: 17, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.gold, shadowColor: '#000', shadowOpacity: .35, shadowRadius: 9, shadowOffset: { width: 0, height: 4 } },
+  palette: { position: 'absolute', zIndex: 60, elevation: 24, left: 16, right: 16, minHeight: 89, borderRadius: 17, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.gold, shadowColor: '#000', shadowOpacity: .35, shadowRadius: 9, shadowOffset: { width: 0, height: 4 } },
   paletteLabel: { color: colors.ivory, fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1 },
-  paletteColors: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 7 },
+  paletteSelection: { color: colors.muted, fontFamily: 'serif', fontSize: 12, lineHeight: 17, marginTop: 2 },
+  paletteColors: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 6 },
   paletteColor: { width: 31, height: 31, borderRadius: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,.72)' },
   paletteBusy: { position: 'absolute', right: 8, top: 8 },
+  savedToast: { position: 'absolute', zIndex: 60, elevation: 24, alignSelf: 'center', minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 9, borderRadius: 24, paddingHorizontal: 18, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.gold, shadowColor: '#000', shadowOpacity: .35, shadowRadius: 9, shadowOffset: { width: 0, height: 4 } },
+  savedDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 1, borderColor: 'rgba(255,255,255,.72)' },
+  savedText: { color: colors.ivory, fontSize: 13, fontWeight: '900' },
 });

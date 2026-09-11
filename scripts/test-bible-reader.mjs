@@ -98,7 +98,15 @@ for (const color of ['yellow', 'orange', 'red', 'green', 'cyan', 'purple']) {
 assert.ok(reader.includes('HIGHLIGHT_COLORS'));
 assert.match(reader, /message\.type === 'selection'\s*&& ready/u, 'Selection must remain disabled until saved highlights finish loading');
 assert.match(reader, /if \(!ready \|\| !pendingSelection \|\| selectionBusy\) return;/u, 'Creation must remain gated until saved highlights finish loading');
-assert.match(reader, /left: 16, right: 16, minHeight: 67/u, 'The six-color palette must use the full narrow-phone width above the Notes button');
+assert.match(reader, /left: 16, right: 16, minHeight: 89/u, 'The six-color palette must use the full narrow-phone width above the Notes button');
+assert.match(reader, /TAP A COLOR TO HIGHLIGHT/u, 'The color action must be explicit once text is selected');
+assert.match(reader, /pendingSelection\.selectedText/u, 'The palette must confirm which text is selected');
+assert.match(reader, /Highlight saved/u, 'Saving a highlight must give visible confirmation without leaving the reader');
+assert.match(reader, /message\.type !== 'ready'/u, 'A fresh WebView ready message must not overwrite the saved reading position');
+assert.match(reader, /requestAnimationFrame\(\(\) => \{[^]*window\.scrollTo\(0, \$\{y\}\)[^]*setTimeout\(\(\) => window\.scrollTo\(0, \$\{y\}\), 50\)/u, 'The reader must restore its exact position after rendered highlights refresh');
+assert.match(reader, /window\.getSelection\(\)\?\.removeAllRanges\(\)/u, 'The native selection must clear after a highlight is saved');
+const chooseColorBody = reader.slice(reader.indexOf('async function chooseColor'), reader.indexOf('function chooseTranslation'));
+assert.doesNotMatch(chooseColorBody, /router\.(?:back|push|replace)/u, 'Saving a highlight must never close or navigate away from the reader');
 for (const label of ['Date Created', 'Bible Order', 'Chronological', 'Color', 'Save Changes']) {
   assert.ok(notes.includes(label), `Notes window must include ${label}`);
 }
