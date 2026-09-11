@@ -3,6 +3,7 @@ node_modules/
 dist/
 supabase/.temp/
 .tmp-apk-inspect/
+.tmp-export-check/
 releases/
 store-assets/
 .env

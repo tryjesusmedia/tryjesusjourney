@@ -1,9 +1,8 @@
 import React from 'react';
-import { Linking, ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { router } from 'expo-router';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
 import { colors } from '@/constants/theme';
-import { CHRONOLOGICAL_BIBLE_URL } from '@/constants/links';
 
 export default function BibleScreen() {
   return <ScrollView style={styles.page} contentContainerStyle={styles.content}>
@@ -14,8 +13,8 @@ export default function BibleScreen() {
     <Card style={styles.primaryCard}>
       <Eyebrow>READ IN HISTORICAL SEQUENCE</Eyebrow>
       <Text style={styles.cardTitle}>Chronological Bible</Text>
-      <Text style={styles.body}>Follow the Bible’s story in chronological order on the Try Jesus Media website. Sign in there with Google to save and sync your progress.</Text>
-      <GoldButton title="Open Chronological Bible" onPress={() => Linking.openURL(CHRONOLOGICAL_BIBLE_URL)} />
+      <Text style={styles.body}>Read the complete chronological plan and every KJV chapter inside the app. Progress and notes are optional, saved on your phone, and can sync with the website if you choose.</Text>
+      <GoldButton title="Read Chronological Bible" onPress={() => router.push('/chronological')} />
     </Card>
 
     <Card>

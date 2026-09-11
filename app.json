@@ -2,7 +2,7 @@
   "expo": {
     "name": "Try Jesus: The Journey",
     "slug": "try-jesus-the-journey",
-    "version": "0.2.1",
+    "version": "0.4.0",
     "orientation": "portrait",
     "scheme": "tryjesusjourney",
     "userInterfaceStyle": "dark",
@@ -10,14 +10,15 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tryjesusmedia.journey",
-      "buildNumber": "1",
+      "buildNumber": "3",
       "config": {
         "usesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.tryjesusmedia.journey",
-      "versionCode": 6,
+      "versionCode": 8,
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-padded.png",
         "backgroundColor": "#311E33"

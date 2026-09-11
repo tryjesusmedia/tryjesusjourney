@@ -39,11 +39,15 @@ create table if not exists public.conflict_principles (
   cross_reference_numbers integer[] not null default '{}',
   group_id uuid,
   group_title text check (group_title is null or char_length(group_title) <= 80),
+  client_mutation_id uuid,
   deleted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, plan_id, principle_number)
 );
+
+alter table public.conflict_principles
+  add column if not exists client_mutation_id uuid;
 
 create table if not exists public.conflict_discussion_posts (
   id uuid primary key default gen_random_uuid(),
@@ -81,6 +85,9 @@ create index if not exists conflict_principles_group_idx
 create index if not exists conflict_principles_deleted_idx
   on public.conflict_principles (user_id, plan_id, deleted_at)
   where deleted_at is not null;
+create unique index if not exists conflict_principles_client_mutation_idx
+  on public.conflict_principles (user_id, plan_id, client_mutation_id)
+  where client_mutation_id is not null;
 create index if not exists conflict_posts_plan_created_idx
   on public.conflict_discussion_posts (plan_id, created_at desc);
 create index if not exists conflict_replies_post_created_idx
@@ -187,11 +194,17 @@ create policy "Members delete own conflict discussion replies" on public.conflic
 for delete to authenticated using (auth.uid() = user_id);
 
 -- Allocates a user's permanent principle numbers atomically across web and mobile.
-create or replace function public.create_conflict_principle(
+drop function if exists public.create_conflict_principle(text, text, text, integer[]);
+drop function if exists public.create_conflict_principle(text, text, text, integer[], integer);
+drop function if exists public.create_conflict_principle(text, text, text, integer[], integer, uuid);
+
+create function public.create_conflict_principle(
   p_plan_id text,
   p_reading_id text,
   p_body text,
-  p_cross_reference_numbers integer[] default '{}'
+  p_cross_reference_numbers integer[] default '{}',
+  p_principle_number integer default null,
+  p_client_mutation_id uuid default null
 )
 returns setof public.conflict_principles
 language plpgsql
@@ -200,7 +213,7 @@ set search_path = public
 as $$
 declare
   current_user_id uuid := auth.uid();
-  next_number integer;
+  chosen_number integer;
   created public.conflict_principles;
 begin
   if current_user_id is null then
@@ -223,6 +236,43 @@ begin
 
   perform pg_advisory_xact_lock(hashtextextended(current_user_id::text || ':' || p_plan_id, 0));
 
+  if p_client_mutation_id is not null then
+    select * into created
+    from public.conflict_principles
+    where user_id = current_user_id
+      and plan_id = p_plan_id
+      and client_mutation_id = p_client_mutation_id;
+    if found then
+      if created.reading_id is distinct from p_reading_id
+        or created.body is distinct from trim(p_body)
+        or created.cross_reference_numbers is distinct from array(
+          select distinct ref.number
+          from unnest(coalesce(p_cross_reference_numbers, '{}')) as ref(number)
+          order by ref.number
+        )
+        or (p_principle_number is not null and created.principle_number is distinct from p_principle_number)
+      then
+        raise exception 'Client mutation ID was already used for a different principle';
+      end if;
+      return next created;
+      return;
+    end if;
+  end if;
+
+  select coalesce(p_principle_number, coalesce(max(principle_number), 0) + 1)
+    into chosen_number
+  from public.conflict_principles
+  where user_id = current_user_id and plan_id = p_plan_id;
+
+  if chosen_number is null or chosen_number < 1 then
+    raise exception 'Principle number must be a whole number greater than zero';
+  end if;
+  if exists (
+    select 1 from public.conflict_principles
+    where user_id = current_user_id and plan_id = p_plan_id and principle_number = chosen_number
+  ) then
+    raise exception 'Principle #% is already in use', chosen_number;
+  end if;
   if exists (
     select 1
     from unnest(coalesce(p_cross_reference_numbers, '{}')) as requested(number)
@@ -237,28 +287,25 @@ begin
     raise exception 'Every cross-reference must identify one of your existing principles';
   end if;
 
-  select coalesce(max(principle_number), 0) + 1 into next_number
-  from public.conflict_principles
-  where user_id = current_user_id and plan_id = p_plan_id;
-
   insert into public.conflict_principles (
-    user_id, plan_id, reading_id, principle_number, body, cross_reference_numbers
+    user_id, plan_id, reading_id, principle_number, body, cross_reference_numbers, client_mutation_id
   ) values (
     current_user_id,
     p_plan_id,
     p_reading_id,
-    next_number,
+    chosen_number,
     trim(p_body),
-    array(select distinct ref.number from unnest(coalesce(p_cross_reference_numbers, '{}')) as ref(number) order by ref.number)
+    array(select distinct ref.number from unnest(coalesce(p_cross_reference_numbers, '{}')) as ref(number) order by ref.number),
+    p_client_mutation_id
   ) returning * into created;
 
   return next created;
 end;
 $$;
 
-revoke all on function public.create_conflict_principle(text, text, text, integer[]) from public;
-revoke all on function public.create_conflict_principle(text, text, text, integer[]) from anon;
-grant execute on function public.create_conflict_principle(text, text, text, integer[]) to authenticated;
+revoke all on function public.create_conflict_principle(text, text, text, integer[], integer, uuid) from public, anon;
+grant execute on function public.create_conflict_principle(text, text, text, integer[], integer, uuid) to authenticated;
+notify pgrst, 'reload schema';
 
 grant select, insert, update, delete on public.conflict_journey_settings to authenticated;
 grant select, insert, update, delete on public.conflict_reading_progress to authenticated;

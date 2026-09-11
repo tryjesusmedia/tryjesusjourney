@@ -3,13 +3,12 @@ import { Alert, FlatList, Image, Linking, RefreshControl, ScrollView, StyleSheet
 import { router, useFocusEffect } from 'expo-router';
 import { colors } from '@/constants/theme';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { bibleGuideSets } from '@/data/bibleGuides';
 import { getGuestGuideProgress } from '@/lib/localStore';
 import { countdownParts, localDiscussionLabel, nextDiscussionDate, type LiveDiscussion } from '@/lib/liveDiscussion';
 import { scheduleDiscussionReminder } from '@/lib/notifications';
-import { CHRONOLOGICAL_BIBLE_URL, WHATSAPP_GROUP_URL } from '@/constants/links';
+import { WHATSAPP_GROUP_URL } from '@/constants/links';
 
 type Video = { videoId: string; title: string; thumbnail?: string; channelTitle?: string; watchUrl: string; durationSeconds?: number };
 type Product = { id: string; name: string; slug: string; images?: {url?: string; transformedUrl?: string}[]; variants?: {unitPrice?: {value?: number; currency?: string}}[]; storefrontUrl: string; pinned?: boolean };
@@ -32,7 +31,6 @@ function selectCarouselProducts(incoming: Product[]) {
 }
 
 export default function HomeScreen() {
-  const { session, guest } = useAuth();
   const [videos, setVideos] = useState<Video[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [discussion, setDiscussion] = useState<LiveDiscussion | null>(null);
@@ -62,15 +60,10 @@ export default function HomeScreen() {
       setProductIndex(0);
     }
     if (discussionResult.data) setDiscussion(discussionResult.data as LiveDiscussion);
-    if (session) {
-      const result = await supabase.from('guide_progress').select('lesson_id,progress_percent,updated_at').in('guide_id', bibleGuideSets.map((guideSet) => guideSet.id)).order('updated_at', { ascending: false }).limit(1).maybeSingle();
-      setProgress(result.data ?? null);
-    } else if (guest) {
-      const savedGuides = (await Promise.all(bibleGuideSets.map((guideSet) => getGuestGuideProgress(guideSet.id)))).filter((item) => item != null).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-      const latest = savedGuides[0];
-      setProgress(latest ? { lesson_id: latest.lessonUrl, progress_percent: latest.progressPercent, updated_at: latest.updatedAt } : null);
-    }
-  }, [session, guest]);
+    const savedGuides = (await Promise.all(bibleGuideSets.map((guideSet) => getGuestGuideProgress(guideSet.id)))).filter((item) => item != null).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    const latest = savedGuides[0];
+    setProgress(latest ? { lesson_id: latest.lessonUrl, progress_percent: latest.progressPercent, updated_at: latest.updatedAt } : null);
+  }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
@@ -134,8 +127,8 @@ export default function HomeScreen() {
       <Card style={styles.readingCard}>
         <Eyebrow>READ SCRIPTURE IN HISTORICAL SEQUENCE</Eyebrow>
         <Text style={styles.sectionTitle}>Chronological Bible</Text>
-        <Text style={styles.body}>Open the chronological reading journey on tryjesusmedia.com. Sign in there with Google to save and sync your progress.</Text>
-        <GoldButton title="Open Chronological Bible" onPress={() => Linking.openURL(CHRONOLOGICAL_BIBLE_URL)} />
+        <Text style={styles.body}>Read the full KJV journey inside the app. Progress and notes are optional, and Google is offered only there if you want website and cross-device sync.</Text>
+        <GoldButton title="Read Chronological Bible" onPress={() => router.push('/chronological')} />
       </Card>
 
       {products.length ? <View>

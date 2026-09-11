@@ -1,16 +1,15 @@
-# Try Jesus: The Journey — Expo Native Beta
+# Try Jesus: The Journey — Expo Native App
 
 This is the first native Android/iOS Expo codebase for Try Jesus Media.
 
 ## Already wired
 
 - Supabase project connection (public client values in `.env`)
-- Google OAuth through Supabase + custom deep link `tryjesusjourney://`
-- Guest mode
-- Synced `guide_progress` for signed-in users
-- Local guest progress
+- Optional Google OAuth used only by Chronological Bible sync
+- No account or sign-in required to use the app
+- On-device Bible Guide progress
 - Bible guide WebView starting at `https://tryjesusmedia.com/welcome/`
-- Private journal (Supabase for signed-in users; local for guests)
+- Private on-device Prayer Journal
 - Random YouTube Edge Function: `random-youtube-video`
 - Random Fourthwall Edge Function: `random-fourthwall-products`
 - Bible Decoded expected as pinned Fourthwall result #1
@@ -54,15 +53,13 @@ This is the first native Android/iOS Expo codebase for Try Jesus Media.
 
 - Redirect allowlist includes `tryjesusjourney://**`
 - Google provider is enabled
-- RLS policies exist for `profiles`, `guide_progress`, `journal_entries`, `questions`
+- RLS policies exist for `reading_plan_progress` and `conflict_principles`
 - `live_discussions` contains Thursday 8 PM America/New_York + Zoom URL
 - `youtube_channels` contains @TryJesusMedia and @TryJesusMedia2
 - Edge Functions `random-youtube-video` and `random-fourthwall-products` are deployed
 
 ## Still to configure later
 
-- Facebook OAuth provider (Meta Developer app + Supabase provider)
-- Apple Developer + Sign in with Apple
 - App Store/Play Store privacy metadata
 - A ministry admin workflow for question responses
 - Exact lesson catalog/deep links if you want native guide navigation instead of the website WebView
@@ -88,15 +85,15 @@ The Edge Function requires an `OPENAI_API_KEY` Supabase secret and uses only ret
 
 ## Added in this build: Bible in Chronological Order
 
-The **Guides** tab now includes a **Bible in Chronological Order** experience based on the supplied Try Jesus Media reading sequence. It includes:
+The **Bible** tab now includes a native **Chronological Bible** experience using the same plan and account data as `tryjesusmedia.com/chronbible/`. It includes:
 
 - the complete reading sequence supplied for this build
 - section headings from The Beginning through Revelation
-- one-tap passage opening in Bible Gateway
-- check-off completion
-- progress percentage
+- native, offline KJV chapter text
+- optional chapter checkoffs and progress percentage
 - Continue Reading card
-- local guest progress
-- Supabase cross-device progress for signed-in users
+- private on-device notes
+- optional Google sign-in located only inside Chronological Bible
+- Supabase synchronization of progress and notes with the website
 
-Run `supabase/sql/app-upgrade.sql` before expecting signed-in chronological-plan progress or Ask Pastor Kal chat history to sync.
+The app and website store reading progress under plan ID `chronological-bible-order-v4` in `reading_plan_progress`. Notes remain under `chronological-bible-order-v3` in the shared `conflict_principles` library so existing notes continue to sync without being orphaned. Run the included Supabase migrations before expecting optional sync to work.

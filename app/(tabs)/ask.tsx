@@ -1,25 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { colors } from '@/constants/theme';
 import { WHATSAPP_GROUP_URL } from '@/constants/links';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-
-type Source = {
-  id?: string | number;
-  category?: string;
-  topic?: string;
-  source_title?: string;
-  source_url?: string;
-  scripture_refs?: string[] | string;
-};
-
-type ChatMessage = {
-  id: string;
-  role: 'user' | 'assistant';
-  text: string;
-  sources?: Source[];
-};
+import { appendGuestAskMessage, getGuestAskHistory, type GuestAskMessage } from '@/lib/localStore';
+import { mergeGuestAskMessages } from '@/lib/localStoreCore';
 
 const starters = [
   'Why does God allow evil?',
@@ -29,47 +15,38 @@ const starters = [
 ];
 
 export default function AskPastorKalScreen() {
-  const { session } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<GuestAskMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [historyReady, setHistoryReady] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
-  useEffect(() => {
-    if (!session?.user.id) return;
-    (async () => {
-      const { data } = await supabase
-        .from('pastor_kal_chat_messages')
-        .select('id,role,message,sources,created_at')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: true })
-        .limit(40);
-      if (data?.length) {
-        setMessages(data.map((row: any) => ({ id: String(row.id), role: row.role, text: row.message, sources: row.sources ?? undefined })));
-      }
-    })();
-  }, [session?.user.id]);
-
-  async function saveMessage(message: ChatMessage) {
-    if (!session?.user.id || message.id === 'welcome') return;
-    await supabase.from('pastor_kal_chat_messages').insert({
-      user_id: session.user.id,
-      role: message.role,
-      message: message.text,
-      sources: message.sources ?? [],
-    });
-  }
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    setHistoryReady(false);
+    getGuestAskHistory()
+      .then((history) => { if (active) setMessages(history); })
+      .catch((error) => console.warn('Could not open local Ask history.', error))
+      .finally(() => { if (active) setHistoryReady(true); });
+    return () => { active = false; };
+  }, []));
 
   async function send(textOverride?: string) {
     const question = (textOverride ?? input).trim();
-    if (!question || loading) return;
+    if (!question || loading || !historyReady) return;
 
-    const userMessage: ChatMessage = { id: `u-${Date.now()}`, role: 'user', text: question };
-    const next = [...messages, userMessage];
+    const userMessage: GuestAskMessage = { id: `u-${Date.now()}`, role: 'user', text: question, createdAt: new Date().toISOString() };
+    let next = mergeGuestAskMessages(messages, [userMessage]);
     setMessages(next);
     setInput('');
     setLoading(true);
-    saveMessage(userMessage);
+
+    try {
+      next = await appendGuestAskMessage(userMessage);
+      setMessages(next);
+    } catch (error) {
+      console.warn('Could not save this question locally.', error);
+    }
 
     try {
       const history = next.slice(-8).map((m) => ({ role: m.role, content: m.text }));
@@ -79,14 +56,19 @@ export default function AskPastorKalScreen() {
       if (error) throw error;
       if (!data?.answer) throw new Error(data?.error ?? 'No answer returned.');
 
-      const assistantMessage: ChatMessage = {
+      const assistantMessage: GuestAskMessage = {
         id: `a-${Date.now()}`,
         role: 'assistant',
         text: data.answer,
         sources: Array.isArray(data.sources) ? data.sources : [],
+        createdAt: new Date().toISOString(),
       };
-      setMessages((current) => [...current, assistantMessage]);
-      saveMessage(assistantMessage);
+      setMessages((current) => mergeGuestAskMessages(current, [assistantMessage]));
+      try {
+        setMessages(await appendGuestAskMessage(assistantMessage));
+      } catch (error) {
+        console.warn('Could not save this answer locally.', error);
+      }
     } catch (error) {
       Alert.alert(
         'Ask Pastor Kal is not connected yet',
@@ -118,7 +100,7 @@ export default function AskPastorKalScreen() {
           maxLength={1200}
           onSubmitEditing={() => send()}
         />
-        <Pressable disabled={loading || !input.trim()} onPress={() => send()} style={[styles.send, (loading || !input.trim()) && styles.sendDisabled]}>
+        <Pressable disabled={loading || !historyReady || !input.trim()} onPress={() => send()} style={[styles.send, (loading || !historyReady || !input.trim()) && styles.sendDisabled]}>
           <Text style={styles.sendText}>Ask</Text>
         </Pressable>
       </View>
@@ -130,9 +112,10 @@ export default function AskPastorKalScreen() {
             <Text style={styles.messageText}>{message.text}</Text>
           </View>
         ))}
+        {!historyReady ? <View style={[styles.message, styles.assistantMessage, styles.loading]}><ActivityIndicator color={colors.gold} /><Text style={styles.messageText}>Opening your saved questions...</Text></View> : null}
         {loading ? <View style={[styles.message, styles.assistantMessage, styles.loading]}><ActivityIndicator color={colors.gold} /><Text style={styles.messageText}>Kal is checking his notes...</Text></View> : null}
 
-        {messages.length === 0 ? (
+        {historyReady && messages.length === 0 ? (
           <View style={styles.starters}>
             <Text style={styles.starterTitle}>START WITH A QUESTION</Text>
             {starters.map((starter) => <Pressable key={starter} onPress={() => send(starter)} style={styles.starter}><Text style={styles.starterText}>{starter}</Text></Pressable>)}

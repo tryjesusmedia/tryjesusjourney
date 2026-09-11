@@ -4,14 +4,11 @@ import { router, useFocusEffect } from 'expo-router';
 import { colors } from '@/constants/theme';
 import { Card, Eyebrow, GoldButton } from '@/components/ui';
 import { bibleGuideSets, guideNumberFromUrl, guideSetProgress, type BibleGuideSetId } from '@/data/bibleGuides';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
 import { getGuestGuideProgress, type GuestProgress } from '@/lib/localStore';
 
 type SavedGuideProgress = GuestProgress & { guideId: BibleGuideSetId };
 
 export default function JourneyScreen() {
-  const { session, guest } = useAuth();
   const [saved, setSaved] = useState<Partial<Record<BibleGuideSetId, SavedGuideProgress>>>({});
   const [ready, setReady] = useState(false);
 
@@ -19,22 +16,14 @@ export default function JourneyScreen() {
     setReady(false);
     const next: Partial<Record<BibleGuideSetId, SavedGuideProgress>> = {};
 
-    if (session) {
-      const result = await supabase.from('guide_progress').select('guide_id,lesson_id,progress_percent,updated_at').in('guide_id', bibleGuideSets.map((guideSet) => guideSet.id));
-      for (const row of result.data ?? []) {
-        const guideId = row.guide_id as BibleGuideSetId;
-        next[guideId] = { guideId, lessonUrl: row.lesson_id, progressPercent: row.progress_percent ?? 0, updatedAt: row.updated_at };
-      }
-    } else if (guest) {
-      const guestProgress = await Promise.all(bibleGuideSets.map(async (guideSet) => ({ guideSet, progress: await getGuestGuideProgress(guideSet.id) })));
-      for (const { guideSet, progress } of guestProgress) {
-        if (progress) next[guideSet.id] = { ...progress, guideId: guideSet.id };
-      }
+    const localProgress = await Promise.all(bibleGuideSets.map(async (guideSet) => ({ guideSet, progress: await getGuestGuideProgress(guideSet.id) })));
+    for (const { guideSet, progress } of localProgress) {
+      if (progress) next[guideSet.id] = { ...progress, guideId: guideSet.id };
     }
 
     setSaved(next);
     setReady(true);
-  }, [guest, session]);
+  }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 

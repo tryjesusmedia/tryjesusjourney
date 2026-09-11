@@ -5,15 +5,12 @@ import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/theme';
 import { getBibleGuideSet, guideNumberFromUrl, guideUrl } from '@/data/bibleGuides';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
 import { getGuestGuideProgress, saveGuestGuideProgress } from '@/lib/localStore';
 
 export default function GuideReaderScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ set?: string }>();
   const guideSet = useMemo(() => getBibleGuideSet(params.set), [params.set]);
-  const { session, guest } = useAuth();
   const [url, setUrl] = useState(guideUrl(guideSet));
   const [savedPercent, setSavedPercent] = useState(0);
   const [ready, setReady] = useState(false);
@@ -21,18 +18,12 @@ export default function GuideReaderScreen() {
 
   useEffect(() => {
     (async () => {
-      if (session) {
-        const result = await supabase.from('guide_progress').select('lesson_id,progress_percent').eq('guide_id', guideSet.id).maybeSingle();
-        if (result.data?.lesson_id) setUrl(guideUrl(guideSet, guideNumberFromUrl(guideSet, result.data.lesson_id)));
-        setSavedPercent(result.data?.progress_percent ?? 0);
-      } else if (guest) {
-        const progress = await getGuestGuideProgress(guideSet.id);
-        if (progress?.lessonUrl) setUrl(guideUrl(guideSet, guideNumberFromUrl(guideSet, progress.lessonUrl)));
-        setSavedPercent(progress?.progressPercent ?? 0);
-      }
+      const progress = await getGuestGuideProgress(guideSet.id);
+      if (progress?.lessonUrl) setUrl(guideUrl(guideSet, guideNumberFromUrl(guideSet, progress.lessonUrl)));
+      setSavedPercent(progress?.progressPercent ?? 0);
       setReady(true);
     })();
-  }, [guest, guideSet, session]);
+  }, [guideSet]);
 
   async function persist(nextUrl: string, percent: number, force = false) {
     if (!nextUrl.toLowerCase().includes(`/${guideSet.path}/guide`)) return;
@@ -41,12 +32,7 @@ export default function GuideReaderScreen() {
     const bounded = Math.max(0, Math.min(100, Math.round(percent)));
     const lessonNumber = guideNumberFromUrl(guideSet, nextUrl);
     const lessonStartUrl = guideUrl(guideSet, lessonNumber);
-    if (session) {
-      const { error } = await supabase.from('guide_progress').upsert({ user_id: session.user.id, guide_id: guideSet.id, lesson_id: lessonStartUrl, progress_percent: bounded, completed: lessonNumber === guideSet.guideCount && bounded >= 99, updated_at: new Date().toISOString() }, { onConflict: 'user_id,guide_id' });
-      if (error) console.warn(error.message);
-    } else if (guest) {
-      await saveGuestGuideProgress(guideSet.id, { lessonUrl: lessonStartUrl, progressPercent: bounded, updatedAt: new Date().toISOString() });
-    }
+    await saveGuestGuideProgress(guideSet.id, { lessonUrl: lessonStartUrl, progressPercent: bounded, updatedAt: new Date().toISOString() });
   }
 
   if (!ready) return <View style={styles.center}><Text style={styles.text}>Opening your saved place…</Text></View>;

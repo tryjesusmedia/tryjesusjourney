@@ -1,20 +1,14 @@
 import { AppState } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { signInWithProvider } from '@/lib/auth';
-
-const GUEST_KEY = 'tryjesus_guest_mode';
+import { signInWithGoogle } from '@/lib/auth';
+import { preserveLegacyCloudData } from '@/lib/legacyCloudData';
 
 type AuthValue = {
   session: Session | null;
-  guest: boolean;
   loading: boolean;
   signInGoogle: () => Promise<boolean>;
-  signInFacebook: () => Promise<boolean>;
-  signInApple: () => Promise<boolean>;
-  continueAsGuest: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -22,21 +16,15 @@ const AuthContext = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [guest, setGuest] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([supabase.auth.getSession(), AsyncStorage.getItem(GUEST_KEY)]).then(([auth, guestFlag]) => {
-      setSession(auth.data.session);
-      setGuest(guestFlag === 'true' && !auth.data.session);
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
       setLoading(false);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
-      if (next) {
-        setGuest(false);
-        AsyncStorage.removeItem(GUEST_KEY).catch(() => {});
-      }
     });
     const appState = AppState.addEventListener('change', (state) => {
       if (state === 'active') supabase.auth.startAutoRefresh();
@@ -45,24 +33,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => { listener.subscription.unsubscribe(); appState.remove(); };
   }, []);
 
-  const continueAsGuest = useCallback(async () => {
-    await AsyncStorage.setItem(GUEST_KEY, 'true');
-    setGuest(true);
-  }, []);
+  useEffect(() => {
+    const userId = session?.user.id;
+    if (!userId) return;
+    preserveLegacyCloudData(userId).catch((error) => {
+      console.warn('Could not check for legacy account data yet.', error);
+    });
+  }, [session?.access_token, session?.user.id]);
+
   const signOut = useCallback(async () => {
-    if (session) await supabase.auth.signOut();
-    await AsyncStorage.removeItem(GUEST_KEY);
-    setSession(null); setGuest(false);
-  }, [session]);
+    await supabase.auth.signOut();
+    setSession(null);
+  }, []);
 
   const value = useMemo<AuthValue>(() => ({
-    session, guest, loading,
-    signInGoogle: () => signInWithProvider('google'),
-    signInFacebook: () => signInWithProvider('facebook'),
-    signInApple: () => signInWithProvider('apple'),
-    continueAsGuest,
+    session, loading,
+    signInGoogle: signInWithGoogle,
     signOut,
-  }), [session, guest, loading, continueAsGuest, signOut]);
+  }), [session, loading, signOut]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

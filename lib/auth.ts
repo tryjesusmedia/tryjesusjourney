@@ -9,9 +9,9 @@ export const oauthRedirectUri = AuthSession.makeRedirectUri({
   path: 'auth/callback',
 });
 
-export async function signInWithProvider(provider: 'google' | 'facebook' | 'apple') {
+export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider,
+    provider: 'google',
     options: {
       redirectTo: oauthRedirectUri,
       skipBrowserRedirect: true,
