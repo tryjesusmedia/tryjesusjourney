@@ -83,6 +83,18 @@ export function mergeGuestJournalEntries(current: GuestJournal[], incoming: Gues
   return merged.sort((left, right) => timestamp(right.createdAt) - timestamp(left.createdAt));
 }
 
+export function updateGuestJournalEntryFields(
+  entries: GuestJournal[],
+  id: string,
+  changes: Pick<GuestJournal, 'title' | 'body'>,
+) {
+  return entries.map((entry) => (
+    String(entry.id) === id
+      ? { ...entry, title: changes.title, body: changes.body }
+      : entry
+  ));
+}
+
 function askFingerprint(message: GuestAskMessage) {
   return `${message.role}\u0000${normalized(message.text)}\u0000${message.createdAt}`;
 }
@@ -92,7 +104,7 @@ export function mergeGuestAskMessages(
   incoming: GuestAskMessage[],
   limit = ASK_HISTORY_LIMIT,
 ) {
-  const merged: Array<{ message: GuestAskMessage; order: number }> = [];
+  const merged: { message: GuestAskMessage; order: number }[] = [];
   const ids = new Set<string>();
   const cloudIds = new Set<string>();
   const fingerprints = new Set<string>();

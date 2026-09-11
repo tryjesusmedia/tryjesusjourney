@@ -6,6 +6,10 @@ import {
   exportChronologicalNotesToGuest,
   loadChronologicalNotes,
 } from '@/lib/chronologicalNotes';
+import {
+  exportBibleHighlightsToGuest,
+  loadBibleHighlights,
+} from '@/lib/bibleHighlights';
 
 type DetachOptions = {
   requireFreshRemoteCopy?: boolean;
@@ -18,6 +22,7 @@ export async function prepareChronologicalDetach(
   const refreshes = [
     loadChronologicalProgress(userId),
     loadChronologicalNotes(userId),
+    loadBibleHighlights(userId),
   ];
   if (requireFreshRemoteCopy) await Promise.all(refreshes);
   else await Promise.allSettled(refreshes);
@@ -25,5 +30,6 @@ export async function prepareChronologicalDetach(
   await Promise.all([
     exportChronologicalProgressToGuest(userId),
     exportChronologicalNotesToGuest(userId),
+    exportBibleHighlightsToGuest(userId),
   ]);
 }

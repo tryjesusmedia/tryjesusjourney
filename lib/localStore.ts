@@ -3,6 +3,7 @@ import {
   mergeGuestAskMessages,
   mergeGuestGuideProgress,
   mergeGuestJournalEntries,
+  updateGuestJournalEntryFields,
   type GuestAskMessage,
   type GuestJournal,
   type GuestProgress,
@@ -96,6 +97,18 @@ export async function removeGuestJournalEntry(id: string) {
   return withJournalLock(async () => {
     const current = await readJson<GuestJournal[]>(JOURNAL_KEY, []);
     const next = current.filter((entry) => entry.id !== id);
+    await AsyncStorage.setItem(JOURNAL_KEY, JSON.stringify(next));
+    return next;
+  });
+}
+
+export async function updateGuestJournalEntry(
+  id: string,
+  changes: Pick<GuestJournal, 'title' | 'body'>,
+) {
+  return withJournalLock(async () => {
+    const current = await readJson<GuestJournal[]>(JOURNAL_KEY, []);
+    const next = updateGuestJournalEntryFields(current, id, changes);
     await AsyncStorage.setItem(JOURNAL_KEY, JSON.stringify(next));
     return next;
   });

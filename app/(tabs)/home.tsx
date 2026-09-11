@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, Image, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Image, Linking, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { colors } from '@/constants/theme';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
@@ -9,6 +9,7 @@ import { getGuestGuideProgress } from '@/lib/localStore';
 import { countdownParts, localDiscussionLabel, nextDiscussionDate, type LiveDiscussion } from '@/lib/liveDiscussion';
 import { scheduleDiscussionReminder } from '@/lib/notifications';
 import { WHATSAPP_GROUP_URL } from '@/constants/links';
+import { ReminderPickerModal } from '@/components/ReminderPickerModal';
 
 type Video = { videoId: string; title: string; thumbnail?: string; channelTitle?: string; watchUrl: string; durationSeconds?: number };
 type Product = { id: string; name: string; slug: string; images?: {url?: string; transformedUrl?: string}[]; variants?: {unitPrice?: {value?: number; currency?: string}}[]; storefrontUrl: string; pinned?: boolean };
@@ -135,7 +136,7 @@ export default function HomeScreen() {
       <Card style={styles.readingCard}>
         <Eyebrow>READ SCRIPTURE IN HISTORICAL SEQUENCE</Eyebrow>
         <Text style={styles.sectionTitle}>Chronological Bible</Text>
-        <Text style={styles.body}>Read the full KJV journey inside the app. Progress and notes are optional, and Google is offered only there if you want website and cross-device sync.</Text>
+        <Text style={styles.body}>Read the full journey inside the app in KJV or WEB. Highlights, notes, progress, and optional cross-device sync stay with you.</Text>
         <GoldButton title="Read Chronological Bible" onPress={() => router.push('/chronological')} />
       </Card>
 
@@ -231,23 +232,7 @@ export default function HomeScreen() {
         <View style={{height: 24}} />
       </ScrollView>
 
-      <Modal transparent visible={reminderOpen} animationType="fade" onRequestClose={() => setReminderOpen(false)}>
-        <Pressable accessible={false} focusable={false} style={styles.modalBackdrop} onPress={() => setReminderOpen(false)}>
-          <Pressable accessible={false} focusable={false} accessibilityViewIsModal style={styles.reminderModal} onPress={(event) => event.stopPropagation()}>
-            <Eyebrow>CHOOSE A REMINDER</Eyebrow>
-            <Text style={styles.reminderTitle}>When should we remind you?</Text>
-            <View style={styles.reminderChoices}>
-              <GoldButton title="24 hours before" onPress={() => remind(1440)} />
-              <OutlineButton title="1 hour before" onPress={() => remind(60)} />
-              <OutlineButton title="15 minutes before" onPress={() => remind(15)} />
-              <OutlineButton title="At start time" onPress={() => remind(0)} />
-            </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Cancel reminder" hitSlop={12} onPress={() => setReminderOpen(false)}>
-              <Text style={styles.reminderCancel}>Cancel</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <ReminderPickerModal visible={reminderOpen} onRequestClose={() => setReminderOpen(false)} onSelect={remind} />
     </>
   );
 }
@@ -257,5 +242,5 @@ const styles = StyleSheet.create({
   header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:4},brand:{color:colors.ivory,fontWeight:'900',fontSize:20,letterSpacing:.5},media:{color:colors.gold,fontWeight:'800',fontSize:11,letterSpacing:2.2},mark:{width:56,height:56},
   bibleDecodedCard:{backgroundColor:colors.panel2,borderColor:colors.gold},bibleDecodedImage:{width:'100%',aspectRatio:16/9,borderRadius:16,marginBottom:16,backgroundColor:colors.plum},bibleDecodedTitle:{color:colors.text,fontSize:28,fontWeight:'900',lineHeight:34,marginBottom:8},whatsappCard:{backgroundColor:colors.panel2},hero:{backgroundColor:colors.plum,padding:24},readingCard:{borderColor:colors.gold,backgroundColor:colors.panel2},askCard:{backgroundColor:colors.panel2},heroTitle:{color:colors.text,fontSize:30,fontWeight:'800',lineHeight:36,marginBottom:10},body:{color:colors.ivory,fontSize:15,lineHeight:23,marginBottom:18},sectionTitle:{color:colors.text,fontSize:21,fontWeight:'800',lineHeight:27,marginBottom:8},meta:{color:colors.muted,fontSize:13,marginBottom:14},
   countdown:{flexDirection:'row',gap:8,marginVertical:16},localTimeNote:{color:colors.muted,fontSize:12,fontWeight:'700',marginTop:-3},timeBox:{flex:1,backgroundColor:colors.panel2,borderRadius:14,paddingVertical:12,alignItems:'center'},timeNum:{color:colors.gold,fontSize:24,fontWeight:'900'},timeLabel:{color:colors.muted,fontSize:9,letterSpacing:1.5,fontWeight:'800'},
-  row:{gap:10,marginTop:10},modalBackdrop:{flex:1,backgroundColor:'rgba(0,0,0,0.72)',justifyContent:'center',padding:24},reminderModal:{backgroundColor:colors.panel,borderColor:colors.gold,borderWidth:1,borderRadius:22,padding:22},reminderTitle:{color:colors.text,fontSize:23,fontWeight:'800',lineHeight:29,marginBottom:16},reminderChoices:{gap:10},reminderCancel:{color:colors.muted,fontSize:15,fontWeight:'800',textAlign:'center',paddingTop:18,paddingBottom:4},videoCard:{padding:14},videoImage:{width:'100%',aspectRatio:16/9,borderRadius:16,marginBottom:14,backgroundColor:colors.plum},productCard:{padding:14},productImage:{width:'100%',aspectRatio:1.6,borderRadius:14,backgroundColor:colors.plum,marginBottom:12},pin:{color:colors.gold,fontSize:10,fontWeight:'900',letterSpacing:1.4,marginBottom:5},productName:{color:colors.text,fontSize:17,fontWeight:'800',marginBottom:5},carouselDots:{flexDirection:'row',justifyContent:'center',gap:7,marginTop:10},carouselDot:{width:7,height:7,borderRadius:4,backgroundColor:colors.border},carouselDotActive:{width:18,backgroundColor:colors.gold}
+  row:{gap:10,marginTop:10},videoCard:{padding:14},videoImage:{width:'100%',aspectRatio:16/9,borderRadius:16,marginBottom:14,backgroundColor:colors.plum},productCard:{padding:14},productImage:{width:'100%',aspectRatio:1.6,borderRadius:14,backgroundColor:colors.plum,marginBottom:12},pin:{color:colors.gold,fontSize:10,fontWeight:'900',letterSpacing:1.4,marginBottom:5},productName:{color:colors.text,fontSize:17,fontWeight:'800',marginBottom:5},carouselDots:{flexDirection:'row',justifyContent:'center',gap:7,marginTop:10},carouselDot:{width:7,height:7,borderRadius:4,backgroundColor:colors.border},carouselDotActive:{width:18,backgroundColor:colors.gold}
 });

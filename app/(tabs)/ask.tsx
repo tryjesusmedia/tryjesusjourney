@@ -90,19 +90,31 @@ export default function AskPastorKalScreen() {
       </View>
 
       <View style={styles.composer}>
-        <TextInput
-          value={input}
-          onChangeText={setInput}
-          placeholder="Ask a Bible question…"
-          placeholderTextColor={colors.muted}
-          multiline
-          style={styles.input}
-          maxLength={1200}
-          onSubmitEditing={() => send()}
-        />
-        <Pressable disabled={loading || !historyReady || !input.trim()} onPress={() => send()} style={[styles.send, (loading || !historyReady || !input.trim()) && styles.sendDisabled]}>
-          <Text style={styles.sendText}>Ask</Text>
-        </Pressable>
+        <View style={styles.questionShell}>
+          <Text style={styles.questionLabel}>ASK YOUR BIBLE QUESTION</Text>
+          <View style={styles.questionRow}>
+            <Text style={styles.questionIcon} accessibilityElementsHidden importantForAccessibility="no">?</Text>
+            <TextInput
+              value={input}
+              onChangeText={setInput}
+              placeholder="Ask a Bible question…"
+              placeholderTextColor="#665A63"
+              multiline
+              style={styles.input}
+              maxLength={1200}
+              onSubmitEditing={() => send()}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Ask Pastor Kal"
+              disabled={loading || !historyReady || !input.trim()}
+              onPress={() => send()}
+              style={[styles.send, (loading || !historyReady || !input.trim()) && styles.sendDisabled]}
+            >
+              <Text style={styles.sendText}>Ask</Text>
+            </Pressable>
+          </View>
+        </View>
       </View>
 
       <ScrollView ref={scrollRef} style={styles.chat} contentContainerStyle={styles.chatContent} onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
@@ -133,5 +145,12 @@ const styles = StyleSheet.create({
   chat:{flex:1},chatContent:{padding:16,gap:12,paddingBottom:28},message:{borderRadius:20,padding:16,borderWidth:1},assistantMessage:{backgroundColor:colors.panel,borderColor:colors.border,marginRight:28},userMessage:{backgroundColor:colors.plum,borderColor:'rgba(255,255,255,.12)',marginLeft:28},role:{color:colors.gold,fontSize:9,fontWeight:'900',letterSpacing:1.4,marginBottom:6},messageText:{color:colors.text,fontSize:15,lineHeight:23},loading:{flexDirection:'row',gap:10,alignItems:'center'},
   starters:{gap:8,marginVertical:4},starterTitle:{color:colors.muted,fontSize:10,fontWeight:'900',letterSpacing:1.5},starter:{backgroundColor:colors.panel2,borderRadius:14,padding:13,borderWidth:1,borderColor:colors.border},starterText:{color:colors.ivory,fontWeight:'800'},
   contactSubtitle:{marginTop:10},contactLink:{color:colors.gold,fontWeight:'900',textDecorationLine:'underline'},
-  composer:{flexDirection:'row',alignItems:'flex-end',gap:10,padding:12,borderBottomWidth:1,borderBottomColor:colors.border,backgroundColor:'#191419'},input:{flex:1,minHeight:48,maxHeight:120,borderRadius:16,borderWidth:1,borderColor:colors.border,backgroundColor:colors.panel,paddingHorizontal:14,paddingVertical:12,color:colors.text,fontSize:15},send:{backgroundColor:colors.gold,borderRadius:16,minHeight:48,paddingHorizontal:18,alignItems:'center',justifyContent:'center'},sendDisabled:{opacity:.45},sendText:{color:colors.charcoal,fontWeight:'900'}
+  composer:{padding:12,borderBottomWidth:1,borderBottomColor:colors.border,backgroundColor:'#191419'},
+  questionShell:{backgroundColor:colors.gold,borderRadius:18,padding:3,shadowColor:'#000',shadowOpacity:.24,shadowRadius:8,shadowOffset:{width:0,height:3},elevation:5},
+  questionLabel:{color:colors.charcoal,fontSize:10,lineHeight:16,fontWeight:'900',letterSpacing:1.5,paddingHorizontal:11,paddingTop:3,paddingBottom:1},
+  questionRow:{minHeight:50,flexDirection:'row',alignItems:'center',borderRadius:15,backgroundColor:'#FFF7E6',paddingHorizontal:12},
+  questionIcon:{color:'#3A2C34',fontSize:21,fontWeight:'900',marginRight:9},
+  input:{flex:1,minHeight:50,maxHeight:120,paddingVertical:10,color:'#241C22',fontSize:16,fontWeight:'700'},
+  send:{backgroundColor:colors.gold,borderRadius:12,minHeight:38,paddingHorizontal:15,alignItems:'center',justifyContent:'center',marginLeft:8},
+  sendDisabled:{opacity:.45},sendText:{color:colors.charcoal,fontWeight:'900'}
 });

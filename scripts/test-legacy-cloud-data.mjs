@@ -5,6 +5,7 @@ import {
   mergeGuestAskMessages,
   mergeGuestGuideProgress,
   mergeGuestJournalEntries,
+  updateGuestJournalEntryFields,
 } from '../lib/localStoreCore.ts';
 
 const localGuide = {
@@ -49,6 +50,18 @@ assert.deepEqual(
   [localJournal],
   'An identical journal entry is not duplicated under a different ID',
 );
+const editedJournal = updateGuestJournalEntryFields([localJournal, cloudJournal], localJournal.id, {
+  title: 'Updated prayer',
+  body: 'Please keep guiding me.',
+});
+assert.deepEqual(
+  editedJournal[0],
+  { ...localJournal, title: 'Updated prayer', body: 'Please keep guiding me.' },
+  'Journal editing changes only the editable fields',
+);
+assert.equal(editedJournal[0].id, localJournal.id, 'Journal editing keeps the original ID');
+assert.equal(editedJournal[0].createdAt, localJournal.createdAt, 'Journal editing keeps the original timestamp');
+assert.strictEqual(editedJournal[1], cloudJournal, 'Journal editing leaves other entries untouched');
 
 const askMessages = Array.from({ length: ASK_HISTORY_LIMIT + 5 }, (_, index) => ({
   id: `message-${index}`,

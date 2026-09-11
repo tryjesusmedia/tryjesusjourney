@@ -4,8 +4,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/theme';
-import { WHATSAPP_GROUP_URL } from '@/constants/links';
 import { getBibleGuideSet, guideNumberFromUrl, guideUrl } from '@/data/bibleGuides';
+import { bibleGatewayReference } from '@/data/bible';
 import { getGuestGuideProgress, saveGuestGuideProgress } from '@/lib/localStore';
 
 const MIN_TEXT_SIZE = 1;
@@ -14,8 +14,18 @@ const MAX_TEXT_SIZE = 40;
 const readerCleanupScript = `
   (() => {
     const style = document.createElement('style');
-    style.textContent = '.site-header,.guide-reader-toolbar,.lesson-return,#listenButton,.listen-button,.guide-audio-speed{display:none!important}';
+    style.id = 'tjm-native-guide-cleanup';
+    style.textContent = '.site-header,.guide-reader-toolbar,.lesson-return,#listenButton,.listen-button,.guide-audio-speed,footer,.site-footer{display:none!important}';
     (document.head || document.documentElement).appendChild(style);
+
+    const removeFooters = (root = document) => {
+      if (root instanceof Element && root.matches('footer,.site-footer')) root.remove();
+      root.querySelectorAll?.('footer,.site-footer').forEach((footer) => footer.remove());
+    };
+    removeFooters();
+    new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => removeFooters(node)));
+    }).observe(document.documentElement, { childList: true, subtree: true });
   })();
   true;
 `;
@@ -77,11 +87,44 @@ export default function GuideReaderScreen() {
     router.replace('/(tabs)/journey');
   }
 
-  function openPreviousLesson() {
-    if (currentGuide <= 1) return;
-    setMenuOpen(false);
-    latestPercent.current = 0;
-    setUrl(guideUrl(guideSet, currentGuide - 1));
+  function internalBibleReference(nextUrl: string) {
+    const gatewayReference = bibleGatewayReference(nextUrl);
+    if (gatewayReference) return gatewayReference;
+    try {
+      const parsed = new URL(nextUrl);
+      if (/(^|\.)tryjesusmedia\.com$/iu.test(parsed.hostname) && /^\/bible-reader\/?$/iu.test(parsed.pathname)) {
+        return parsed.searchParams.get('reference')?.trim() || null;
+      }
+    } catch {
+      // Ignore malformed navigation URLs.
+    }
+    return null;
+  }
+
+  function handleReadingLink(nextUrl: string) {
+    const reference = internalBibleReference(nextUrl);
+    if (reference) {
+      setMenuOpen(false);
+      router.push({
+        pathname: '/bible-reader' as never,
+        params: {
+          reference,
+          planId: 'bible-guides',
+          readingId: `${guideSet.id}:guide-${currentGuide}`,
+        },
+      });
+      return true;
+    }
+    try {
+      const hostname = new URL(nextUrl).hostname;
+      if (/(^|\.)(egwwritings\.org|whiteestate\.org)$/iu.test(hostname)) {
+        void Linking.openURL(nextUrl);
+        return true;
+      }
+    } catch {
+      // Let the WebView decide how to handle other malformed URLs.
+    }
+    return false;
   }
 
   function startOver() {
@@ -141,8 +184,6 @@ export default function GuideReaderScreen() {
       <View style={styles.headerCopy}><View style={styles.titleCopy}><Text style={styles.title}>{currentTitle}</Text><Text style={styles.setTitle}>{guideSet.title}</Text></View><Text style={styles.guideNumber}>Guide {currentGuide} of {guideSet.guideCount}</Text></View>
       {menuOpen ? <View style={styles.menu}>
         <Pressable accessibilityRole="button" onPress={returnToBibleGuides} style={styles.menuItem}><Text style={styles.menuItemText}>Return to Bible Guides</Text></Pressable>
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: currentGuide <= 1 }} disabled={currentGuide <= 1} onPress={openPreviousLesson} style={[styles.menuItem, currentGuide <= 1 && styles.menuItemDisabled]}><Text style={styles.menuItemText}>Previous Lesson</Text></Pressable>
-        <Pressable accessibilityRole="button" onPress={() => { setMenuOpen(false); Linking.openURL(WHATSAPP_GROUP_URL); }} style={styles.menuItem}><Text style={styles.menuItemText}>Need Help?</Text></Pressable>
       </View> : null}
     </View>
     <WebView
@@ -153,12 +194,14 @@ export default function GuideReaderScreen() {
       injectedJavaScript={readerReadyScript}
       onMessage={handleMessage}
       onShouldStartLoadWithRequest={(request) => {
+        if (handleReadingLink(request.url)) return false;
         if (/tryjesusmedia\.com\/welcome\/?#bible-guides/i.test(request.url)) {
           returnToBibleGuides();
           return false;
         }
         return true;
       }}
+      setSupportMultipleWindows={false}
       onNavigationStateChange={(navigation) => {
         const changedLesson = guideNumberFromUrl(guideSet, navigation.url) !== guideNumberFromUrl(guideSet, url);
         if (changedLesson) {
@@ -179,5 +222,5 @@ export default function GuideReaderScreen() {
 }
 
 const styles = StyleSheet.create({
-  page:{flex:1,backgroundColor:colors.charcoal},header:{position:'relative',zIndex:10,elevation:10,paddingHorizontal:18,paddingBottom:12},headerTopline:{minHeight:44,flexDirection:'row',alignItems:'center',gap:8,marginBottom:7},headerButton:{minHeight:38,borderWidth:1,borderColor:colors.gold,borderRadius:10,paddingHorizontal:11,alignItems:'center',justifyContent:'center'},headerButtonText:{color:colors.ivory,fontSize:12,fontWeight:'900'},textControls:{flexDirection:'row',gap:6},sizeButton:{width:42,minHeight:38,borderRadius:10,backgroundColor:colors.panel2,alignItems:'center',justifyContent:'center'},sizeButtonText:{color:colors.gold,fontSize:14,fontWeight:'900'},menuButton:{width:44,minHeight:40,borderRadius:10,backgroundColor:colors.gold,alignItems:'center',justifyContent:'center',marginLeft:'auto'},menuIcon:{color:colors.charcoal,fontSize:21,fontWeight:'900'},headerCopy:{flexDirection:'row',alignItems:'flex-end',justifyContent:'space-between',gap:12},titleCopy:{flex:1},title:{color:colors.text,fontSize:20,fontWeight:'900',lineHeight:25},setTitle:{color:colors.muted,fontSize:11,fontWeight:'800',marginTop:3},guideNumber:{color:colors.gold,fontSize:11,fontWeight:'900'},menu:{position:'absolute',zIndex:20,elevation:20,top:52,right:18,width:230,backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:14,padding:7},menuItem:{minHeight:46,justifyContent:'center',paddingHorizontal:12,borderBottomWidth:1,borderBottomColor:colors.border},menuItemDisabled:{opacity:.4},menuItemText:{color:colors.ivory,fontSize:14,fontWeight:'800'},web:{flex:1,backgroundColor:colors.ivory},center:{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:colors.charcoal},text:{color:colors.ivory},
+  page:{flex:1,backgroundColor:colors.charcoal},header:{position:'relative',zIndex:10,elevation:10,paddingHorizontal:18,paddingBottom:12},headerTopline:{minHeight:44,flexDirection:'row',alignItems:'center',gap:8,marginBottom:7},headerButton:{minHeight:38,borderWidth:1,borderColor:colors.gold,borderRadius:10,paddingHorizontal:11,alignItems:'center',justifyContent:'center'},headerButtonText:{color:colors.ivory,fontSize:12,fontWeight:'900'},textControls:{flexDirection:'row',gap:6},sizeButton:{width:42,minHeight:38,borderRadius:10,backgroundColor:colors.panel2,alignItems:'center',justifyContent:'center'},sizeButtonText:{color:colors.gold,fontSize:14,fontWeight:'900'},menuButton:{width:44,minHeight:40,borderRadius:10,backgroundColor:colors.gold,alignItems:'center',justifyContent:'center',marginLeft:'auto'},menuIcon:{color:colors.charcoal,fontSize:21,fontWeight:'900'},headerCopy:{flexDirection:'row',alignItems:'flex-end',justifyContent:'space-between',gap:12},titleCopy:{flex:1},title:{color:colors.text,fontSize:20,fontWeight:'900',lineHeight:25},setTitle:{color:colors.muted,fontSize:11,fontWeight:'800',marginTop:3},guideNumber:{color:colors.gold,fontSize:11,fontWeight:'900'},menu:{position:'absolute',zIndex:20,elevation:20,top:52,right:18,width:230,backgroundColor:colors.panel,borderWidth:1,borderColor:colors.border,borderRadius:14,padding:7},menuItem:{minHeight:46,justifyContent:'center',paddingHorizontal:12},menuItemText:{color:colors.ivory,fontSize:14,fontWeight:'800'},web:{flex:1,backgroundColor:colors.ivory},center:{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:colors.charcoal},text:{color:colors.ivory},
 });

@@ -1,6 +1,6 @@
 {
   "name": "try-jesus-the-journey",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -12,7 +12,10 @@
     "typecheck": "tsc --noEmit",
     "test:chronological-state": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-chronological-state.mjs",
     "test:legacy-cloud-data": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-legacy-cloud-data.mjs",
-    "test:home-guide-ui": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-home-guide-ui.mjs"
+    "test:home-guide-ui": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-home-guide-ui.mjs",
+    "test:journal-ask-ui": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-journal-ask-ui.mjs",
+    "test:guide-reader-ui": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-guide-reader-ui.mjs",
+    "test:bible-reader": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-bible-reader.mjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
