@@ -181,6 +181,15 @@ assert.match(idempotencyMigration, /notify pgrst, 'reload schema'/);
 const chronologicalScreen = await readFile(new URL('../app/chronological.tsx', import.meta.url), 'utf8');
 const moreScreen = await readFile(new URL('../app/(tabs)/more.tsx', import.meta.url), 'utf8');
 assert.match(chronologicalScreen, /prepareChronologicalDetach\(sessionUserId\)[^]*await signOut\(\)/);
+assert.match(chronologicalScreen, /accessibilityLabel="Chron Bible menu"/);
+assert.match(chronologicalScreen, /session[^]*Sign Out of Google Sync[^]*Sign In to Sync/);
+assert.match(chronologicalScreen, /<Eyebrow>YOUR PROGRESS<\/Eyebrow>/);
+assert.doesNotMatch(chronologicalScreen, /YOUR OPTIONAL PROGRESS/);
+assert.doesNotMatch(chronologicalScreen, /Read all \{chronologicalPlanMeta\.readingCount\} assignments/);
+assert.doesNotMatch(chronologicalScreen, /Read freely, or mark chapters/);
+assert.doesNotMatch(chronologicalScreen, /SYNC IS ON|SAVED ON THIS PHONE|Chron Bible is synced\./);
+assert.doesNotMatch(chronologicalScreen, /key=\{normalizedQuery \? 'search' : view\}/);
+assert.doesNotMatch(chronologicalScreen, /scrollTo(?:Offset|Index)/);
 assert.match(moreScreen, /prepareChronologicalDetach\(session\.user\.id, \{ requireFreshRemoteCopy: true \}\)[^]*await signOut\(\)/);
 assert.match(moreScreen, /prepareChronologicalDetach\(session\.user\.id, \{ requireFreshRemoteCopy: true \}\)[^]*functions\.invoke\('delete-account'/);
 

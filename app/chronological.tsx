@@ -56,7 +56,6 @@ const emptyProgress: ChronologicalProgress = { completed: [], lastIndex: 0, upda
 
 export default function ChronologicalBibleScreen() {
   const insets = useSafeAreaInsets();
-  const listRef = useRef<FlatList<ChronologicalListItem>>(null);
   const loadGenerationRef = useRef(0);
   const { session, loading: authLoading, signInGoogle, signOut } = useAuth();
   const sessionUserId = session?.user.id;
@@ -68,6 +67,7 @@ export default function ChronologicalBibleScreen() {
   const [syncBusy, setSyncBusy] = useState(false);
   const [taskBusy, setTaskBusy] = useState<number | null>(null);
   const [noteBusy, setNoteBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [view, setView] = useState<ViewMode>('readings');
   const [query, setQuery] = useState('');
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(chronologicalBiblePlan[0]?.id ?? null);
@@ -172,6 +172,7 @@ export default function ChronologicalBibleScreen() {
 
   async function connectGoogle() {
     if (syncBusy) return;
+    setMenuOpen(false);
     setSyncBusy(true);
     try {
       const completed = await signInGoogle();
@@ -186,6 +187,7 @@ export default function ChronologicalBibleScreen() {
 
   async function disconnectGoogle() {
     if (!sessionUserId || syncBusy) return;
+    setMenuOpen(false);
     setSyncBusy(true);
     try {
       await prepareChronologicalDetach(sessionUserId);
@@ -292,8 +294,34 @@ export default function ChronologicalBibleScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton} accessibilityRole="button">
           <Text style={styles.backText}>‹ Back</Text>
         </Pressable>
-        <Text style={styles.translation}>KJV · NATIVE</Text>
+        <View style={styles.topbarActions}>
+          <Text style={styles.translation}>KJV · NATIVE</Text>
+          <Pressable
+            onPress={() => setMenuOpen((open) => !open)}
+            style={[styles.menuButton, menuOpen ? styles.menuButtonOpen : undefined]}
+            accessibilityRole="button"
+            accessibilityLabel="Chron Bible menu"
+            accessibilityState={{ expanded: menuOpen }}
+          >
+            <View style={styles.menuBar} />
+            <View style={styles.menuBar} />
+            <View style={styles.menuBar} />
+          </Pressable>
+        </View>
       </View>
+      {menuOpen ? (
+        <View style={styles.menuCard}>
+          <Eyebrow>CHRON BIBLE SYNC</Eyebrow>
+          <Text style={styles.menuText}>
+            {session
+              ? `Signed in as ${session.user.email ?? 'your Google account'}.`
+              : 'Sign in only if you want your progress and notes to sync with the website.'}
+          </Text>
+          {session
+            ? <OutlineButton title={syncBusy ? 'Preparing on-phone copy…' : 'Sign Out of Google Sync'} disabled={syncBusy} onPress={disconnectGoogle} />
+            : <GoldButton title="Sign In to Sync" loading={syncBusy || authLoading} onPress={connectGoogle} />}
+        </View>
+      ) : null}
       <View style={styles.fixedTitleRow}>
         <View style={styles.fixedTitleCopy}>
           <Eyebrow>READ IN HISTORICAL SEQUENCE</Eyebrow>
@@ -337,32 +365,16 @@ export default function ChronologicalBibleScreen() {
         </View>
       ) : (
         <>
-          <Text style={styles.subtitle}>Read all {chronologicalPlanMeta.readingCount} assignments and every KJV chapter inside the app—even without signing in.</Text>
-
           <Card style={styles.progressCard}>
             <View style={styles.progressHeading}>
               <View>
-                <Eyebrow>YOUR OPTIONAL PROGRESS</Eyebrow>
+                <Eyebrow>YOUR PROGRESS</Eyebrow>
                 <Text style={styles.progressNumber}>{percent}% complete</Text>
               </View>
               <Text style={styles.progressCount}>{progress.completed.length}/{chronologicalPlanMeta.chapterCount}</Text>
             </View>
             <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${percent}%` }]} /></View>
-            <Text style={styles.helper}>Read freely, or mark chapters and write notes when you want to remember your place.</Text>
             <GoldButton title="Continue Reading" onPress={continueReading} />
-          </Card>
-
-          <Card style={session ? styles.syncedCard : styles.localCard}>
-            <Eyebrow>{session ? 'SYNC IS ON' : 'SAVED ON THIS PHONE'}</Eyebrow>
-            <Text style={styles.cardTitle}>{session ? 'Chron Bible is synced.' : 'Google sign-in is optional.'}</Text>
-            <Text style={styles.body}>
-              {session
-                ? `Progress and notes are syncing with tryjesusmedia.com as ${session.user.email ?? 'your Google account'}.`
-                : 'Everything works locally now. Connect Google only if you want Chron Bible progress and notes on the website and your other devices.'}
-            </Text>
-            {session
-              ? <OutlineButton title={syncBusy ? 'Preparing on-phone copy…' : 'Disconnect Google from Chron Bible'} disabled={syncBusy} onPress={disconnectGoogle} />
-              : <GoldButton title="Connect Google for Chron Bible Sync" loading={syncBusy || authLoading} onPress={connectGoogle} />}
           </Card>
 
           <View style={styles.tabs}>
@@ -389,11 +401,9 @@ export default function ChronologicalBibleScreen() {
     >
       {fixedHeader}
       <FlatList<ChronologicalListItem>
-        ref={listRef}
         style={styles.list}
         contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 24 }]}
         data={listItems}
-        key={normalizedQuery ? 'search' : view}
         keyExtractor={(item) => {
           if (item.kind === 'section') return `section-${item.section.id}`;
           if (item.kind === 'reading') return `reading-${item.reading.id}`;
@@ -557,13 +567,18 @@ const styles = StyleSheet.create({
   fixedHeader: { backgroundColor: colors.charcoal, paddingHorizontal: 18, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   headerStack: { gap: 14, marginBottom: 16 },
   topbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  topbarActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   backButton: { paddingVertical: 8, paddingRight: 14 },
   backText: { color: colors.gold, fontSize: 16, fontWeight: '800' },
   translation: { color: colors.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 },
+  menuButton: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  menuButtonOpen: { borderColor: colors.gold, backgroundColor: colors.panel2 },
+  menuBar: { width: 20, height: 2, borderRadius: 2, backgroundColor: colors.gold },
+  menuCard: { marginTop: 8, marginBottom: 12, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.gold, backgroundColor: colors.panel2 },
+  menuText: { color: colors.ivory, fontSize: 13, lineHeight: 20, marginBottom: 13 },
   fixedTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   fixedTitleCopy: { flex: 1 },
   title: { color: colors.text, fontSize: 28, fontWeight: '900', lineHeight: 34 },
-  subtitle: { color: colors.muted, fontSize: 15, lineHeight: 23 },
   progressCard: { backgroundColor: colors.plum },
   progressHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   progressNumber: { color: colors.text, fontSize: 24, fontWeight: '900' },
@@ -571,8 +586,6 @@ const styles = StyleSheet.create({
   progressTrack: { height: 9, borderRadius: 20, backgroundColor: 'rgba(255,255,255,.13)', overflow: 'hidden', marginVertical: 14 },
   progressFill: { height: '100%', borderRadius: 20, backgroundColor: colors.gold },
   helper: { color: colors.muted, fontSize: 12, lineHeight: 18, marginBottom: 13 },
-  localCard: { backgroundColor: colors.panel2 },
-  syncedCard: { backgroundColor: '#193126', borderColor: 'rgba(79,193,139,.45)' },
   cardTitle: { color: colors.text, fontSize: 20, fontWeight: '900', marginBottom: 7 },
   body: { color: colors.ivory, fontSize: 14, lineHeight: 21, marginBottom: 14 },
   tabs: { flexDirection: 'row', backgroundColor: colors.panel, padding: 4, borderRadius: 16, borderWidth: 1, borderColor: colors.border },

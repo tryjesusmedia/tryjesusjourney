@@ -11,11 +11,11 @@ export function Eyebrow({ children }: { children: React.ReactNode }) {
 }
 
 export function GoldButton({ title, onPress, disabled, loading }: { title: string; onPress: () => void; disabled?: boolean; loading?: boolean }) {
-  return <Pressable onPress={onPress} disabled={disabled || loading} style={({ pressed }) => [styles.button, pressed && styles.pressed, (disabled || loading) && styles.disabled]}>{loading ? <ActivityIndicator color={colors.charcoal} /> : <Text style={styles.buttonText}>{title}</Text>}</Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityState={{ disabled: Boolean(disabled || loading), busy: Boolean(loading) }} onPress={onPress} disabled={disabled || loading} style={({ pressed }) => [styles.button, pressed && styles.pressed, (disabled || loading) && styles.disabled]}>{loading ? <ActivityIndicator color={colors.charcoal} /> : <Text style={styles.buttonText}>{title}</Text>}</Pressable>;
 }
 
 export function OutlineButton({ title, onPress, disabled }: { title: string; onPress: () => void; disabled?: boolean }) {
-  return <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.outline, pressed && styles.pressed, disabled && styles.disabled]}><Text style={styles.outlineText}>{title}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityState={{ disabled: Boolean(disabled) }} onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.outline, pressed && styles.pressed, disabled && styles.disabled]}><Text style={styles.outlineText}>{title}</Text></Pressable>;
 }
 
 const styles = StyleSheet.create({

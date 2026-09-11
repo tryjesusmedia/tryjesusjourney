@@ -11,7 +11,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test:chronological-state": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-chronological-state.mjs",
-    "test:legacy-cloud-data": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-legacy-cloud-data.mjs"
+    "test:legacy-cloud-data": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-legacy-cloud-data.mjs",
+    "test:home-guide-ui": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-home-guide-ui.mjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
