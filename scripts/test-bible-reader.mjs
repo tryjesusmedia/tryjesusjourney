@@ -88,34 +88,22 @@ for (const [chapter, verses] of Object.entries(kjv)) {
 
 const reader = await readFile(new URL('../app/bible-reader.tsx', import.meta.url), 'utf8');
 const readerHtml = await readFile(new URL('../components/bibleReaderHtml.ts', import.meta.url), 'utf8');
-const notes = await readFile(new URL('../components/BibleHighlights.tsx', import.meta.url), 'utf8');
 const highlightsCore = await readFile(new URL('../lib/bibleHighlightsCore.ts', import.meta.url), 'utf8');
 const highlightsStore = await readFile(new URL('../lib/bibleHighlights.ts', import.meta.url), 'utf8');
 const guideReader = await readFile(new URL('../app/guide-reader.tsx', import.meta.url), 'utf8');
 for (const color of ['yellow', 'orange', 'red', 'green', 'cyan', 'purple']) {
-  assert.ok(highlightsCore.includes(`'${color}'`), `Reader must expose the ${color} highlighter through the shared palette`);
+  assert.ok(highlightsCore.includes(`'${color}'`), `Stored legacy ${color} highlights must remain readable without deleting user data`);
 }
-assert.ok(reader.includes('HIGHLIGHT_COLORS'));
-assert.match(reader, /message\.type === 'selection'\s*&& ready/u, 'Selection must remain disabled until saved highlights finish loading');
-assert.match(reader, /if \(!ready \|\| !pendingSelection \|\| selectionBusy\) return;/u, 'Creation must remain gated until saved highlights finish loading');
-assert.match(reader, /left: 16, right: 16, minHeight: 89/u, 'The six-color palette must use the full narrow-phone width above the Notes button');
-assert.match(reader, /TAP A COLOR TO HIGHLIGHT/u, 'The color action must be explicit once text is selected');
-assert.match(reader, /pendingSelection\.selectedText/u, 'The palette must confirm which text is selected');
-assert.match(reader, /Highlight saved/u, 'Saving a highlight must give visible confirmation without leaving the reader');
-assert.match(reader, /message\.type !== 'ready'/u, 'A fresh WebView ready message must not overwrite the saved reading position');
-assert.match(reader, /requestAnimationFrame\(\(\) => \{[^]*window\.scrollTo\(0, \$\{y\}\)[^]*setTimeout\(\(\) => window\.scrollTo\(0, \$\{y\}\), 50\)/u, 'The reader must restore its exact position after rendered highlights refresh');
-assert.match(reader, /window\.getSelection\(\)\?\.removeAllRanges\(\)/u, 'The native selection must clear after a highlight is saved');
-const chooseColorBody = reader.slice(reader.indexOf('async function chooseColor'), reader.indexOf('function chooseTranslation'));
-assert.doesNotMatch(chooseColorBody, /router\.(?:back|push|replace)/u, 'Saving a highlight must never close or navigate away from the reader');
-for (const label of ['Date Created', 'Bible Order', 'Chronological', 'Color', 'Save Changes']) {
-  assert.ok(notes.includes(label), `Notes window must include ${label}`);
-}
+assert.match(reader, /BIBLE_TRANSLATIONS\.map/u, 'The native reader must retain both bundled translations');
+assert.match(reader, /bibleReaderHtml\(sections\)/u);
+assert.match(reader, /javaScriptEnabled=\{false\}/u, 'The reader must not run the retired custom highlighting behavior');
+assert.doesNotMatch(reader, /useBibleHighlights|BibleNotesButton|BibleHighlightsWindow|HIGHLIGHT_COLORS|pendingSelection|Highlight saved/u);
+assert.doesNotMatch(reader, /Read KJV/u);
 assert.match(guideReader, /bibleGatewayReference\(nextUrl\)/);
 assert.match(guideReader, /\/bible-reader/);
 assert.match(guideReader, /egwwritings\\\.org\|whiteestate\\\.org/);
 assert.match(readerHtml, /data-selection-group/);
-assert.match(readerHtml, /role="button" tabindex="0" aria-label="Open highlight and note"/u);
-assert.match(readerHtml, /event\.key === 'Enter' \|\| event\.key === ' '/u);
+assert.doesNotMatch(readerHtml, /BibleHighlight|<mark|postMessage|reportSelection|open-highlight|data-highlight-id/u, 'The rendered native Bible must not expose custom highlighting behavior');
 const loadStore = highlightsStore.slice(
   highlightsStore.indexOf('export async function loadBibleHighlights'),
   highlightsStore.indexOf('export async function createBibleHighlight'),
@@ -229,4 +217,4 @@ assert.deepEqual(reconcileRemoteBibleHighlights([], [remoteFixture]), [], 'A ser
 assert.equal(parseBibleHighlightCreationDate('2026-02-31'), null, 'Impossible creation dates must not silently roll into March');
 assert.equal(parseBibleHighlightCreationDate('2028-02-29'), '2028-02-29T12:00:00.000Z');
 
-console.log('Bundled KJV/WEB reader, reference parsing, highlight notes, and guide-link routing passed.');
+console.log('Bundled KJV/WEB reader, reference parsing, retired-highlight data preservation, and guide-link routing passed.');

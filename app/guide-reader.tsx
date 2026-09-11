@@ -107,11 +107,7 @@ export default function GuideReaderScreen() {
       setMenuOpen(false);
       router.push({
         pathname: '/bible-reader' as never,
-        params: {
-          reference,
-          planId: 'bible-guides',
-          readingId: `${guideSet.id}:guide-${currentGuide}`,
-        },
+        params: { reference },
       });
       return true;
     }

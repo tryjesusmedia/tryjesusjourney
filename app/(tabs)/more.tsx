@@ -24,7 +24,7 @@ export default function MoreScreen() {
       await signOut();
       Alert.alert(
         'Google disconnected',
-        'Your Chron Bible progress, highlights, and notes are available on this phone. Changes made while disconnected will sync when you reconnect this same Google account.',
+        'Your Chron Bible progress is available on this phone. Changes made while disconnected will sync when you reconnect this same Google account.',
       );
     } catch (caught) {
       Alert.alert(
@@ -52,7 +52,7 @@ export default function MoreScreen() {
       await signOut();
       Alert.alert(
         'Account deleted',
-        'Your online sync account and its data were permanently deleted. Your Chron Bible progress, highlights, and notes remain as a local-only copy on this phone.',
+        'Your online sync account and its data were permanently deleted. Your Chron Bible progress remains as a local-only copy on this phone.',
         [{ text: 'Done', onPress: () => router.replace('/(tabs)/home') }],
       );
     } catch (caught) {
@@ -70,7 +70,7 @@ export default function MoreScreen() {
   function confirmDeletion() {
     Alert.alert(
       'Delete your account and data?',
-      'First, the latest Chron Bible progress, highlights, and notes will be saved on this phone. Then this permanently deletes the Google-linked sync account and its online data. The local copy will remain, but the deleted sync account cannot be restored. This cannot be undone.',
+      'First, the latest Chron Bible progress will be saved on this phone. Then this permanently deletes the Google-linked sync account and its online data. The local copy will remain, but the deleted sync account cannot be restored. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -92,7 +92,7 @@ export default function MoreScreen() {
   return <ScrollView style={styles.page} contentContainerStyle={styles.content}>
     <Eyebrow>TRY JESUS MEDIA</Eyebrow><Text style={styles.title}>Your journey, your pace.</Text>
     <Card style={styles.whatsappCard}><Text style={styles.cardTitle}>WhatsApp Group</Text><Text style={styles.body}>Ask questions, share what&apos;s on your heart, and keep the conversation going with the Try Jesus Media family.</Text><GoldButton title="Join the WhatsApp Group" onPress={() => Linking.openURL(WHATSAPP_GROUP_URL)} /></Card>
-    <Card><Text style={styles.cardTitle}>Chron Bible Sync</Text><Text style={styles.body}>{session ? `Google is connected as ${session.user.email ?? 'your account'} only for syncing Chron Bible progress, highlights, and notes with the website.` : 'The whole app works without an account. If you want cross-device saving, Google can be connected only from inside Chronological Bible.'}</Text><GoldButton title="Open Chronological Bible" onPress={() => router.push('/chronological')} />{session ? <><View style={styles.buttonSpacer} /><OutlineButton title={disconnecting ? 'Preparing on-phone copy…' : 'Disconnect Google from Chron Bible'} disabled={disconnecting || deleting} onPress={disconnectChronSync} /><Text style={styles.deletionNote}>Deleting the sync account permanently removes its online data after saving the latest Chron Bible copy on this phone.</Text><OutlineButton title={deleting ? 'Saving Copy and Deleting…' : 'Delete Sync Account and Online Data'} disabled={deleting || disconnecting} onPress={confirmDeletion} /><Text style={styles.deletionHelp} onPress={() => Linking.openURL(ACCOUNT_DELETION_URL)}>Account deletion help</Text></> : null}</Card>
+    <Card><Text style={styles.cardTitle}>Chron Bible Sync</Text><Text style={styles.body}>{session ? `Google is connected as ${session.user.email ?? 'your account'} only for syncing Chron Bible progress with the website.` : 'The whole app works without an account. If you want cross-device saving, Google can be connected only from inside Chronological Bible.'}</Text><GoldButton title="Open Chronological Bible" onPress={() => router.push('/chronological')} />{session ? <><View style={styles.buttonSpacer} /><OutlineButton title={disconnecting ? 'Preparing on-phone copy…' : 'Disconnect Google from Chron Bible'} disabled={disconnecting || deleting} onPress={disconnectChronSync} /><Text style={styles.deletionNote}>Deleting the sync account permanently removes its online data after saving the latest Chron Bible copy on this phone.</Text><OutlineButton title={deleting ? 'Saving Copy and Deleting…' : 'Delete Sync Account and Online Data'} disabled={deleting || disconnecting} onPress={confirmDeletion} /><Text style={styles.deletionHelp} onPress={() => Linking.openURL(ACCOUNT_DELETION_URL)}>Account deletion help</Text></> : null}</Card>
     <Card><Text style={styles.cardTitle}>Try Jesus Media Store</Text><Text style={styles.body}>Explore programs, resources, apparel, and ministry merchandise.</Text><OutlineButton title="Fourthwall Store" onPress={() => Linking.openURL('https://try-jesus-new-york-shop.fourthwall.com/')} /></Card>
     <Card><Text style={styles.cardTitle}>Questions & Privacy</Text><Text style={styles.body}>Question submissions and ministry support can be sent to info@tryjesusmedia.com. Prayer Journal entries and Bible Guide progress stay privately on this phone.</Text><OutlineButton title="Email Try Jesus Media" onPress={() => Linking.openURL('mailto:info@tryjesusmedia.com')} /></Card>
     <Card><Text style={styles.cardTitle}>Members</Text><Text style={styles.body}>Open the Try Jesus Media members welcome page.</Text><GoldButton title="Open Members Page" onPress={() => Linking.openURL('https://tryjesusmedia.com/welcome/')} /></Card>

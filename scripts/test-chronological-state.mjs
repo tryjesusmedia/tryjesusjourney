@@ -25,6 +25,14 @@ import {
 
 const plan = JSON.parse(await readFile(new URL('../data/chronologicalBiblePlan.json', import.meta.url), 'utf8'));
 const limits = { chapterCount: plan.chapterCount, readingCount: plan.readingCount };
+for (const reading of plan.readings) {
+  for (const task of reading.bibleTasks) {
+    const gateway = new URL(task.url);
+    assert.match(gateway.hostname, /(^|\.)biblegateway\.com$/u);
+    assert.equal(gateway.searchParams.get('version'), 'KJV');
+    assert.equal(gateway.searchParams.get('search'), task.label, `${task.label} must open its matching KJV passage on BibleGateway`);
+  }
+}
 const maps = {
   previousChapterMigration: plan.previousChapterMigration,
   previousReadingMigration: plan.previousReadingMigration,
@@ -180,6 +188,8 @@ assert.match(idempotencyMigration, /notify pgrst, 'reload schema'/);
 
 const chronologicalScreen = await readFile(new URL('../app/chronological.tsx', import.meta.url), 'utf8');
 const moreScreen = await readFile(new URL('../app/(tabs)/more.tsx', import.meta.url), 'utf8');
+const bibleTab = await readFile(new URL('../app/(tabs)/bible.tsx', import.meta.url), 'utf8');
+const homeScreen = await readFile(new URL('../app/(tabs)/home.tsx', import.meta.url), 'utf8');
 assert.match(chronologicalScreen, /prepareChronologicalDetach\(sessionUserId\)[^]*await signOut\(\)/);
 assert.match(chronologicalScreen, /accessibilityLabel="Chron Bible menu"/);
 assert.match(chronologicalScreen, /session[^]*Sign Out of Google Sync[^]*Sign In to Sync/);
@@ -188,6 +198,11 @@ assert.doesNotMatch(chronologicalScreen, /YOUR OPTIONAL PROGRESS/);
 assert.doesNotMatch(chronologicalScreen, /Read all \{chronologicalPlanMeta\.readingCount\} assignments/);
 assert.doesNotMatch(chronologicalScreen, /Read freely, or mark chapters/);
 assert.doesNotMatch(chronologicalScreen, /SYNC IS ON|SAVED ON THIS PHONE|Chron Bible is synced\./);
+assert.match(chronologicalScreen, /openChapter\(task\.label\)[^]*task\.label[^]*chapterDivider[^]*openBibleGateway\(task\.url\)[^]*Read on BibleGateway/u, 'Each task must show native reading first, a divider, then BibleGateway');
+assert.match(chronologicalScreen, /await Linking\.openURL\(url\)/u);
+assert.doesNotMatch(chronologicalScreen, /BibleHighlightsWindow|BibleNotesButton|useBibleHighlights|kind: 'highlight'|searchResults\.highlights|HIGHLIGHT & NOTE/u);
+assert.doesNotMatch(chronologicalScreen, /Search readings, highlights, and notes|SEARCH BIBLE \+ NOTES|No matching readings or notes|Read KJV/u);
+assert.doesNotMatch(`${bibleTab}\n${homeScreen}\n${moreScreen}`, /Chron Bible[^\n<]*(?:highlights|notes)|(?:highlights|notes)[^\n<]*Chron Bible/iu, 'Visible Chron Bible copy must not advertise the retired notes/highlighting feature');
 assert.doesNotMatch(chronologicalScreen, /key=\{normalizedQuery \? 'search' : view\}/);
 assert.doesNotMatch(chronologicalScreen, /scrollTo(?:Offset|Index)/);
 assert.match(moreScreen, /prepareChronologicalDetach\(session\.user\.id, \{ requireFreshRemoteCopy: true \}\)[^]*await signOut\(\)/);

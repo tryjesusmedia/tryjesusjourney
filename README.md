@@ -90,11 +90,10 @@ The **Bible** tab now includes a native **Chronological Bible** experience using
 - the complete reading sequence supplied for this build
 - section headings from The Beginning through Revelation
 - native, offline KJV and WEB Bible text
+- a BibleGateway KJV link beside every native chapter or passage
 - optional chapter checkoffs and progress percentage
 - Continue Reading card
-- selectable Bible text with six highlight colors and private notes
-- a persistent Notes window with Bible-order, chronological, color, and creation-date sorting
 - optional Google sign-in located only inside Chronological Bible
-- Supabase synchronization of progress, highlights, and notes with the website
+- Supabase synchronization of reading progress with the website
 
-The app and website store reading progress under plan ID `chronological-bible-order-v4` in `reading_plan_progress`. New highlights and notes use the shared `bible_highlights` table. The old `conflict_principles` data is preserved for compatibility, but its former Principles-map interface is no longer shown. Run the included Supabase migrations before expecting optional sync to work. The bundled Bible editions and repeatable import commands are documented in `data/BIBLE_SOURCES.md`.
+The app and website store reading progress under plan ID `chronological-bible-order-v4` in `reading_plan_progress`. The former notes, principles, and highlighting interfaces are no longer shown. Their historical data and migrations are retained so this change does not erase user records. Run the included Supabase progress migrations before expecting optional sync to work. The bundled Bible editions and repeatable import commands are documented in `data/BIBLE_SOURCES.md`.

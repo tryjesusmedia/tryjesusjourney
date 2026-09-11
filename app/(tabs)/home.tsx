@@ -136,7 +136,7 @@ export default function HomeScreen() {
       <Card style={styles.readingCard}>
         <Eyebrow>READ SCRIPTURE IN HISTORICAL SEQUENCE</Eyebrow>
         <Text style={styles.sectionTitle}>Chronological Bible</Text>
-        <Text style={styles.body}>Read the full journey inside the app in KJV or WEB. Highlights, notes, progress, and optional cross-device sync stay with you.</Text>
+        <Text style={styles.body}>Read the full journey inside the app in KJV or WEB. Your progress and optional cross-device sync stay with you.</Text>
         <GoldButton title="Read Chronological Bible" onPress={() => router.push('/chronological')} />
       </Card>
 

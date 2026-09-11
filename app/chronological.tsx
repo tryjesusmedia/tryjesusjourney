@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -13,7 +14,6 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BibleHighlightsWindow, BibleNotesButton } from '@/components/BibleHighlights';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
 import { colors } from '@/constants/theme';
 import {
@@ -36,14 +36,10 @@ import {
   saveChronologicalProgress,
   type ChronologicalProgress,
 } from '@/lib/chronologicalProgress';
-import type { BibleHighlight } from '@/lib/bibleHighlightsCore';
-import { useBibleHighlights } from '@/lib/useBibleHighlights';
-
 type ChronologicalListItem =
   | { kind: 'section'; section: ChronologicalSection }
   | { kind: 'reading'; reading: ChronologicalReading; searchResult?: boolean }
-  | { kind: 'highlight'; highlight: BibleHighlight }
-  | { kind: 'result-heading'; id: 'bible-results' | 'note-results'; title: string; count: number };
+  | { kind: 'result-heading'; id: 'bible-results'; title: string; count: number };
 
 const emptyProgress: ChronologicalProgress = { completed: [], lastIndex: 0, updatedAt: '' };
 
@@ -62,14 +58,6 @@ export default function ChronologicalBibleScreen() {
   const [query, setQuery] = useState('');
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(chronologicalBiblePlan[0]?.id ?? null);
   const [expandedReadingId, setExpandedReadingId] = useState<string | null>(null);
-  const [notesVisible, setNotesVisible] = useState(false);
-  const [selectedHighlightId, setSelectedHighlightId] = useState<string | null>(null);
-  const {
-    highlights,
-    ready: highlightsReady,
-    update: updateHighlight,
-    remove: removeHighlight,
-  } = useBibleHighlights();
 
   useFocusEffect(useCallback(() => {
     const generation = ++loadGenerationRef.current;
@@ -111,26 +99,18 @@ export default function ChronologicalBibleScreen() {
   const percent = Math.round((progress.completed.length / chronologicalPlanMeta.chapterCount) * 100);
   const normalizedQuery = query.trim().toLowerCase();
   const searchResults = useMemo(() => {
-    if (!normalizedQuery) return { readings: [], highlights: [] };
-    const readings = chronologicalReadings.filter((reading) =>
+    if (!normalizedQuery) return [];
+    return chronologicalReadings.filter((reading) =>
       `${reading.number} ${reading.section} ${reading.title} ${reading.reference} ${reading.bibleTasks.map((task) => task.label).join(' ')}`.toLowerCase().includes(normalizedQuery),
     );
-    const matchingHighlights = highlights.filter((highlight) =>
-      `${highlight.selectedText} ${highlight.note} ${highlight.reference} ${highlight.chapterLabel} ${highlight.translation}`.toLowerCase().includes(normalizedQuery),
-    );
-    return { readings, highlights: matchingHighlights };
-  }, [highlights, normalizedQuery]);
+  }, [normalizedQuery]);
 
   const listItems = useMemo<ChronologicalListItem[]>(() => {
     if (normalizedQuery) {
       const items: ChronologicalListItem[] = [];
-      if (searchResults.readings.length) {
-        items.push({ kind: 'result-heading', id: 'bible-results', title: 'Bible readings', count: searchResults.readings.length });
-        items.push(...searchResults.readings.map((reading) => ({ kind: 'reading' as const, reading, searchResult: true })));
-      }
-      if (searchResults.highlights.length) {
-        items.push({ kind: 'result-heading', id: 'note-results', title: 'Highlights & notes', count: searchResults.highlights.length });
-        items.push(...searchResults.highlights.map((highlight) => ({ kind: 'highlight' as const, highlight })));
+      if (searchResults.length) {
+        items.push({ kind: 'result-heading', id: 'bible-results', title: 'Bible readings', count: searchResults.length });
+        items.push(...searchResults.map((reading) => ({ kind: 'reading' as const, reading, searchResult: true })));
       }
       return items;
     }
@@ -148,7 +128,7 @@ export default function ChronologicalBibleScreen() {
     try {
       const completed = await signInGoogle();
       if (!completed) return;
-      Alert.alert('Google connected', 'Your Chron Bible progress, highlights, and notes will now stay in sync with the website.');
+      Alert.alert('Google connected', 'Your Chron Bible progress will now stay in sync with the website.');
     } catch (caught) {
       Alert.alert('Google sign-in did not finish', caught instanceof Error ? caught.message : 'Please try again.');
     } finally {
@@ -163,7 +143,7 @@ export default function ChronologicalBibleScreen() {
     try {
       await prepareChronologicalDetach(sessionUserId);
       await signOut();
-      Alert.alert('Google disconnected', 'Your Chron Bible progress, highlights, and notes are available on this phone. Changes will sync if you reconnect this Google account.');
+      Alert.alert('Google disconnected', 'Your Chron Bible progress is available on this phone. Changes will sync if you reconnect this Google account.');
     } catch (caught) {
       Alert.alert('Could not disconnect safely', caught instanceof Error ? caught.message : 'Your on-phone Chron Bible copy could not be prepared. Please try again.');
     } finally {
@@ -204,8 +184,16 @@ export default function ChronologicalBibleScreen() {
     setExpandedReadingId(next.id);
   }
 
-  function openChapter(reading: ChronologicalReading, chapterLabel: string) {
-    router.push({ pathname: '/bible-reader' as never, params: { reference: chapterLabel, readingId: reading.id, planId: chronologicalPlanMeta.planId } });
+  function openChapter(chapterLabel: string) {
+    router.push({ pathname: '/bible-reader' as never, params: { reference: chapterLabel } });
+  }
+
+  async function openBibleGateway(url: string) {
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Could not open BibleGateway', 'Please check your connection and try again.');
+    }
   }
 
   const fixedHeader = (
@@ -222,7 +210,7 @@ export default function ChronologicalBibleScreen() {
       {menuOpen ? (
         <View style={styles.menuCard}>
           <Eyebrow>CHRON BIBLE SYNC</Eyebrow>
-          <Text style={styles.menuText}>{session ? `Signed in as ${session.user.email ?? 'your Google account'}.` : 'Sign in only if you want your progress, highlights, and notes to sync with the website.'}</Text>
+          <Text style={styles.menuText}>{session ? `Signed in as ${session.user.email ?? 'your Google account'}.` : 'Sign in only if you want your progress to sync with the website.'}</Text>
           {session
             ? <OutlineButton title={syncBusy ? 'Preparing on-phone copy…' : 'Sign Out of Google Sync'} disabled={syncBusy} onPress={disconnectGoogle} />
             : <GoldButton title="Sign In to Sync" loading={syncBusy || authLoading} onPress={connectGoogle} />}
@@ -230,10 +218,10 @@ export default function ChronologicalBibleScreen() {
       ) : null}
       <View style={styles.fixedTitleRow}><View style={styles.fixedTitleCopy}><Eyebrow>READ IN HISTORICAL SEQUENCE</Eyebrow><Text style={styles.title}>Chronological Bible</Text></View></View>
       <View style={styles.searchShell}>
-        <Text style={styles.searchLabel}>SEARCH BIBLE + NOTES</Text>
+        <Text style={styles.searchLabel}>SEARCH BIBLE READINGS</Text>
         <View style={styles.searchRow}>
           <Text style={styles.searchIcon} accessibilityElementsHidden>⌕</Text>
-          <TextInput value={query} onChangeText={setQuery} placeholder="Search readings, highlights, and notes" placeholderTextColor="#665A63" style={styles.search} autoCorrect={false} returnKeyType="search" accessibilityLabel="Search Bible readings, highlights, and notes" />
+          <TextInput value={query} onChangeText={setQuery} placeholder="Search readings" placeholderTextColor="#665A63" style={styles.search} autoCorrect={false} returnKeyType="search" accessibilityLabel="Search Bible readings" />
           {query ? <Pressable onPress={() => setQuery('')} style={styles.clearSearch} accessibilityRole="button" accessibilityLabel="Clear search"><Text style={styles.clearSearchText}>×</Text></Pressable> : null}
         </View>
       </View>
@@ -244,8 +232,7 @@ export default function ChronologicalBibleScreen() {
     <View style={styles.headerStack}>
       {normalizedQuery ? (
         <View style={styles.resultSummary}>
-          <Text style={styles.resultSummaryTitle}>{searchResults.readings.length + searchResults.highlights.length} search result{searchResults.readings.length + searchResults.highlights.length === 1 ? '' : 's'}</Text>
-          <Text style={styles.resultSummaryBody}>{searchResults.readings.length} Bible reading{searchResults.readings.length === 1 ? '' : 's'} · {searchResults.highlights.length} highlight{searchResults.highlights.length === 1 ? '' : 's'} or note{searchResults.highlights.length === 1 ? '' : 's'}</Text>
+          <Text style={styles.resultSummaryTitle}>{searchResults.length} search result{searchResults.length === 1 ? '' : 's'}</Text>
         </View>
       ) : (
         <Card style={styles.progressCard}>
@@ -266,11 +253,11 @@ export default function ChronologicalBibleScreen() {
       {fixedHeader}
       <FlatList<ChronologicalListItem>
         style={styles.list}
-        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) + 82 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) }]}
         data={listItems}
-        keyExtractor={(item) => item.kind === 'section' ? `section-${item.section.id}` : item.kind === 'reading' ? `reading-${item.reading.id}` : item.kind === 'highlight' ? `highlight-${item.highlight.id}` : item.id}
+        keyExtractor={(item) => item.kind === 'section' ? `section-${item.section.id}` : item.kind === 'reading' ? `reading-${item.reading.id}` : item.id}
         ListHeaderComponent={listHeader}
-        ListEmptyComponent={<Card><Text style={styles.emptyTitle}>{normalizedQuery ? 'No matching readings or notes' : 'No readings yet'}</Text><Text style={styles.body}>{normalizedQuery ? 'Try a different word, book, chapter, or phrase from one of your highlights or notes.' : 'Choose a section to begin reading.'}</Text></Card>}
+        ListEmptyComponent={<Card><Text style={styles.emptyTitle}>{normalizedQuery ? 'No matching readings' : 'No readings yet'}</Text><Text style={styles.body}>{normalizedQuery ? 'Try a different word, book, chapter, or reading title.' : 'Choose a section to begin reading.'}</Text></Card>}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
@@ -288,13 +275,6 @@ export default function ChronologicalBibleScreen() {
             </Pressable></Card>;
           }
 
-          if (item.kind === 'highlight') {
-            const highlight = item.highlight;
-            return <Pressable onPress={() => { setNotesVisible(false); setSelectedHighlightId(highlight.id); }}><Card style={styles.noteResultCard}>
-              <Text style={styles.noteResultBadge}>HIGHLIGHT & NOTE</Text><Text style={styles.noteReading}>{highlight.reference} · {highlight.translation}</Text><Text numberOfLines={4} style={styles.noteQuote}>{highlight.selectedText}</Text>{highlight.note ? <Text numberOfLines={2} style={styles.noteBody}>Note: {highlight.note}</Text> : null}
-            </Card></Pressable>;
-          }
-
           const { reading } = item;
           const isExpanded = expandedReadingId === reading.id;
           const readingCompleted = reading.bibleTasks.filter((task) => completedSet.has(task.progressIndex)).length;
@@ -308,14 +288,20 @@ export default function ChronologicalBibleScreen() {
               const isComplete = completedSet.has(task.progressIndex);
               return <View key={task.progressIndex} style={styles.chapterBlock}><View style={styles.chapterRow}>
                 <Pressable onPress={() => toggleTask(task.progressIndex, reading.index)} disabled={taskBusy !== null} style={[styles.checkbox, isComplete && styles.checkboxComplete]} accessibilityRole="checkbox" accessibilityState={{ checked: isComplete }}><Text style={styles.checkmark}>{taskBusy === task.progressIndex ? '…' : isComplete ? '✓' : ''}</Text></Pressable>
-                <Pressable onPress={() => openChapter(reading, task.label)} style={styles.chapterButton} accessibilityRole="button"><Text style={[styles.chapterLabel, isComplete && styles.chapterComplete]}>{task.label}</Text><Text style={styles.readLabel}>Read ›</Text></Pressable>
+                <View style={styles.chapterActions}>
+                  <Pressable onPress={() => openChapter(task.label)} style={styles.chapterButton} accessibilityRole="button" accessibilityLabel={`Read ${task.label} in the app`}>
+                    <Text style={[styles.chapterLabel, isComplete && styles.chapterComplete]}>{task.label}</Text>
+                  </Pressable>
+                  <View style={styles.chapterDivider} />
+                  <Pressable onPress={() => void openBibleGateway(task.url)} style={styles.gatewayButton} accessibilityRole="link" accessibilityLabel={`Read ${task.label} on BibleGateway`}>
+                    <Text style={styles.gatewayLabel}>Read on BibleGateway</Text>
+                  </Pressable>
+                </View>
               </View></View>;
             })}</View> : null}
           </Card>;
         }}
       />
-      <BibleNotesButton count={highlights.length} bottom={Math.max(insets.bottom, 12)} onPress={() => { setSelectedHighlightId(null); setNotesVisible(true); }} />
-      <BibleHighlightsWindow highlights={highlights} ready={highlightsReady} notesVisible={notesVisible} selectedHighlightId={selectedHighlightId} onCloseNotes={() => { setNotesVisible(false); setSelectedHighlightId(null); }} onSelectHighlight={setSelectedHighlightId} onUpdate={updateHighlight} onDelete={removeHighlight} />
     </KeyboardAvoidingView>
   );
 }
@@ -327,8 +313,8 @@ const styles = StyleSheet.create({
   menuButton: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', gap: 4 }, menuButtonOpen: { borderColor: colors.gold, backgroundColor: colors.panel2 }, menuBar: { width: 20, height: 2, borderRadius: 2, backgroundColor: colors.gold }, menuCard: { marginTop: 8, marginBottom: 12, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.gold, backgroundColor: colors.panel2 }, menuText: { color: colors.ivory, fontSize: 13, lineHeight: 20, marginBottom: 13 },
   fixedTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 }, fixedTitleCopy: { flex: 1 }, title: { color: colors.text, fontSize: 28, fontWeight: '900', lineHeight: 34 }, progressCard: { backgroundColor: colors.plum }, progressHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, progressNumber: { color: colors.text, fontSize: 24, fontWeight: '900' }, progressCount: { color: colors.gold, fontSize: 15, fontWeight: '900' }, progressTrack: { height: 9, borderRadius: 20, backgroundColor: 'rgba(255,255,255,.13)', overflow: 'hidden', marginVertical: 14 }, progressFill: { height: '100%', borderRadius: 20, backgroundColor: colors.gold },
   body: { color: colors.ivory, fontSize: 14, lineHeight: 21, marginBottom: 14 }, searchShell: { backgroundColor: colors.gold, borderRadius: 18, padding: 3, shadowColor: '#000', shadowOpacity: .24, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 5 }, searchLabel: { color: colors.charcoal, fontSize: 10, lineHeight: 16, fontWeight: '900', letterSpacing: 1.5, paddingHorizontal: 11, paddingTop: 3, paddingBottom: 1 }, searchRow: { minHeight: 50, flexDirection: 'row', alignItems: 'center', borderRadius: 15, backgroundColor: '#FFF7E6', paddingHorizontal: 12 }, searchIcon: { color: '#3A2C34', fontSize: 25, fontWeight: '900', marginRight: 7, marginTop: -2 }, search: { flex: 1, minHeight: 50, paddingVertical: 10, color: '#241C22', fontSize: 16, fontWeight: '700' }, clearSearch: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8D9BF' }, clearSearchText: { color: '#3A2C34', fontSize: 24, lineHeight: 27, fontWeight: '800' },
-  resultSummary: { backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.gold, borderRadius: 18, padding: 15 }, resultSummaryTitle: { color: colors.text, fontSize: 18, fontWeight: '900' }, resultSummaryBody: { color: colors.muted, fontSize: 12, lineHeight: 18, marginTop: 3 }, resultHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4, paddingHorizontal: 3 }, resultHeadingText: { color: colors.text, fontSize: 18, fontWeight: '900' }, resultHeadingCount: { minWidth: 28, height: 28, borderRadius: 14, overflow: 'hidden', textAlign: 'center', textAlignVertical: 'center', backgroundColor: colors.gold, color: colors.charcoal, fontSize: 12, fontWeight: '900' }, separator: { height: 12 }, emptyTitle: { color: colors.text, fontSize: 18, fontWeight: '900', marginBottom: 5 },
+  resultSummary: { backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.gold, borderRadius: 18, padding: 15 }, resultSummaryTitle: { color: colors.text, fontSize: 18, fontWeight: '900' }, resultHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4, paddingHorizontal: 3 }, resultHeadingText: { color: colors.text, fontSize: 18, fontWeight: '900' }, resultHeadingCount: { minWidth: 28, height: 28, borderRadius: 14, overflow: 'hidden', textAlign: 'center', textAlignVertical: 'center', backgroundColor: colors.gold, color: colors.charcoal, fontSize: 12, fontWeight: '900' }, separator: { height: 12 }, emptyTitle: { color: colors.text, fontSize: 18, fontWeight: '900', marginBottom: 5 },
   sectionCard: { backgroundColor: colors.plum, borderColor: 'rgba(238,189,74,.38)' }, sectionCardOpen: { backgroundColor: colors.plum2, borderColor: colors.gold }, sectionTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, sectionNumber: { color: colors.gold, fontSize: 10, fontWeight: '900', letterSpacing: 1.5 }, sectionChevron: { color: colors.gold, fontSize: 26, lineHeight: 27, fontWeight: '500' }, sectionTitle: { color: colors.text, fontSize: 19, lineHeight: 25, fontWeight: '900', marginTop: 7 }, sectionMeta: { color: colors.ivory, fontSize: 12, lineHeight: 18, marginTop: 6 }, sectionAction: { color: colors.gold, fontSize: 12, fontWeight: '900', marginTop: 12 },
-  readingResultCard: { borderColor: colors.gold }, readingResultBadge: { alignSelf: 'flex-start', color: colors.charcoal, backgroundColor: colors.gold, borderRadius: 10, overflow: 'hidden', paddingHorizontal: 9, paddingVertical: 5, fontSize: 9, fontWeight: '900', letterSpacing: 1.2, marginBottom: 11 }, noteResultCard: { borderColor: colors.green, backgroundColor: '#193126' }, noteResultBadge: { alignSelf: 'flex-start', color: '#10231B', backgroundColor: colors.green, borderRadius: 10, overflow: 'hidden', paddingHorizontal: 9, paddingVertical: 5, fontSize: 9, fontWeight: '900', letterSpacing: 1.2, marginBottom: 11 }, noteReading: { color: colors.gold, fontSize: 11, fontWeight: '900', marginBottom: 8 }, noteQuote: { color: colors.text, fontFamily: 'serif', fontSize: 16, lineHeight: 24 }, noteBody: { color: colors.muted, fontSize: 13, lineHeight: 20, marginTop: 8 },
-  expandedCard: { borderColor: colors.gold, backgroundColor: colors.panel2 }, readingTopline: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 }, readingNumber: { color: colors.gold, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 }, readingCount: { color: colors.muted, fontSize: 11, fontWeight: '800' }, readingTitle: { color: colors.text, fontSize: 19, fontWeight: '900', lineHeight: 25, marginTop: 8 }, sectionLabel: { color: colors.muted, fontSize: 12, marginTop: 5 }, expandLabel: { color: colors.gold, fontSize: 12, fontWeight: '900', marginTop: 12 }, expandedContent: { marginTop: 18, gap: 10 }, chapterBlock: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 }, chapterRow: { flexDirection: 'row', alignItems: 'center', gap: 11 }, checkbox: { width: 30, height: 30, borderRadius: 9, borderWidth: 1, borderColor: colors.gold, alignItems: 'center', justifyContent: 'center' }, checkboxComplete: { backgroundColor: colors.green, borderColor: colors.green }, checkmark: { color: colors.charcoal, fontWeight: '900', fontSize: 18 }, chapterButton: { flex: 1, minHeight: 42, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, chapterLabel: { color: colors.text, fontSize: 16, fontWeight: '900' }, chapterComplete: { color: colors.muted, textDecorationLine: 'line-through' }, readLabel: { color: colors.gold, fontSize: 12, fontWeight: '900' },
+  readingResultCard: { borderColor: colors.gold }, readingResultBadge: { alignSelf: 'flex-start', color: colors.charcoal, backgroundColor: colors.gold, borderRadius: 10, overflow: 'hidden', paddingHorizontal: 9, paddingVertical: 5, fontSize: 9, fontWeight: '900', letterSpacing: 1.2, marginBottom: 11 },
+  expandedCard: { borderColor: colors.gold, backgroundColor: colors.panel2 }, readingTopline: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 }, readingNumber: { color: colors.gold, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 }, readingCount: { color: colors.muted, fontSize: 11, fontWeight: '800' }, readingTitle: { color: colors.text, fontSize: 19, fontWeight: '900', lineHeight: 25, marginTop: 8 }, sectionLabel: { color: colors.muted, fontSize: 12, marginTop: 5 }, expandLabel: { color: colors.gold, fontSize: 12, fontWeight: '900', marginTop: 12 }, expandedContent: { marginTop: 18, gap: 10 }, chapterBlock: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 }, chapterRow: { flexDirection: 'row', alignItems: 'center', gap: 11 }, checkbox: { width: 30, height: 30, borderRadius: 9, borderWidth: 1, borderColor: colors.gold, alignItems: 'center', justifyContent: 'center' }, checkboxComplete: { backgroundColor: colors.green, borderColor: colors.green }, checkmark: { color: colors.charcoal, fontWeight: '900', fontSize: 18 }, chapterActions: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'stretch', borderRadius: 10, backgroundColor: 'rgba(255,255,255,.025)' }, chapterButton: { flex: 1, minWidth: 0, justifyContent: 'center', paddingHorizontal: 8 }, chapterLabel: { color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: '900' }, chapterComplete: { color: colors.muted, textDecorationLine: 'line-through' }, chapterDivider: { width: 1, marginVertical: 8, backgroundColor: colors.border }, gatewayButton: { flex: 1.25, minWidth: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7, paddingVertical: 7 }, gatewayLabel: { color: colors.gold, fontSize: 11, lineHeight: 15, fontWeight: '900', textAlign: 'center' },
 });

@@ -19,6 +19,7 @@ export async function prepareChronologicalDetach(
   userId: string,
   { requireFreshRemoteCopy = false }: DetachOptions = {},
 ) {
+  // Preserve legacy notes/highlights during detach even though those tools are no longer shown in the app.
   const refreshes = [
     loadChronologicalProgress(userId),
     loadChronologicalNotes(userId),

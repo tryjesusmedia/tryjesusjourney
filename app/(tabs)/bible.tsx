@@ -13,7 +13,7 @@ export default function BibleScreen() {
     <Card style={styles.primaryCard}>
       <Eyebrow>READ IN HISTORICAL SEQUENCE</Eyebrow>
       <Text style={styles.cardTitle}>Chronological Bible</Text>
-      <Text style={styles.body}>Read every chapter inside the app in KJV or WEB. Save highlights and notes on your phone, with optional website and cross-device sync.</Text>
+      <Text style={styles.body}>Read every chapter inside the app in KJV or WEB and keep your progress, with optional website and cross-device sync.</Text>
       <GoldButton title="Read Chronological Bible" onPress={() => router.push('/chronological')} />
     </Card>
 
