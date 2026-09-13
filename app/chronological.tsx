@@ -316,11 +316,11 @@ export default function ChronologicalBibleScreen() {
         key={sessionUserId ?? 'guest'}
         visible={leaderboardVisible}
         signedIn={Boolean(sessionUserId)}
-        aliasSaving={journeyProfile.saving}
+        aliasRerolling={journeyProfile.rerolling}
         signInBusy={syncBusy || authLoading}
         onRequestClose={() => setLeaderboardVisible(false)}
         onSignIn={connectGoogle}
-        onSaveAlias={journeyProfile.saveAlias}
+        onChangeAlias={journeyProfile.changeAlias}
       />
     </KeyboardAvoidingView>
   );

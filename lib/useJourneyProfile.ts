@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ensureJourneyProfile, updateJourneyAlias } from '@/lib/journeyRewards';
+import { ensureJourneyProfile, rerollJourneyAlias } from '@/lib/journeyRewards';
 
 export function useJourneyProfile(userId?: string) {
   const generationRef = useRef(0);
   const [alias, setAlias] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [rerolling, setRerolling] = useState(false);
   const [error, setError] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -13,7 +13,7 @@ export function useJourneyProfile(userId?: string) {
     if (!userId) {
       setAlias(null);
       setLoading(false);
-      setSaving(false);
+      setRerolling(false);
       setError(false);
       return null;
     }
@@ -43,13 +43,13 @@ export function useJourneyProfile(userId?: string) {
     };
   }, [refresh]);
 
-  const saveAlias = useCallback(async (value: string) => {
-    if (!userId || saving) return null;
+  const changeAlias = useCallback(async () => {
+    if (!userId || rerolling) return null;
     const generation = ++generationRef.current;
-    setSaving(true);
+    setRerolling(true);
     setError(false);
     try {
-      const nextAlias = await updateJourneyAlias(value);
+      const nextAlias = await rerollJourneyAlias();
       if (generationRef.current !== generation) return null;
       setAlias(nextAlias);
       return nextAlias;
@@ -57,9 +57,9 @@ export function useJourneyProfile(userId?: string) {
       if (generationRef.current === generation) setError(true);
       throw caught;
     } finally {
-      if (generationRef.current === generation) setSaving(false);
+      if (generationRef.current === generation) setRerolling(false);
     }
-  }, [saving, userId]);
+  }, [rerolling, userId]);
 
-  return { alias, loading, saving, error, refresh, saveAlias };
+  return { alias, loading, rerolling, error, refresh, changeAlias };
 }
