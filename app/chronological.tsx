@@ -325,12 +325,12 @@ export default function ChronologicalBibleScreen() {
         alias={journeyProfile.alias}
         aliasLoading={journeyProfile.loading}
         aliasError={journeyProfile.error}
-        aliasRerolling={journeyProfile.rerolling}
+        aliasSaving={journeyProfile.saving}
         signInBusy={syncBusy || authLoading}
         onRequestClose={() => setLeaderboardVisible(false)}
         onSignIn={connectGoogle}
         onRetryAlias={journeyProfile.refresh}
-        onChangeAlias={journeyProfile.changeAlias}
+        onSaveAlias={journeyProfile.saveAlias}
       />
     </KeyboardAvoidingView>
   );

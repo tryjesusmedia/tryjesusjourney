@@ -51,7 +51,7 @@ export function JourneyStatusCard({
       <Text style={styles.identity}>
         {signedIn
           ? aliasLoading ? 'Preparing your Journey alias…' : alias ? `Your alias: ${alias}` : 'Your alias is temporarily unavailable.'
-          : 'Sign in with Google to receive an alias and join the leaderboard.'}
+          : 'Sign in with Google to choose a leaderboard name and join the community.'}
       </Text>
 
       <Pressable

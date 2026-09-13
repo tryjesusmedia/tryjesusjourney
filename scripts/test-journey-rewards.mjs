@@ -72,6 +72,7 @@ const profileHook = await readFile(new URL('../lib/useJourneyProfile.ts', import
 const service = await readFile(new URL('../lib/journeyRewards.ts', import.meta.url), 'utf8');
 const migration = await readFile(new URL('../supabase/migrations/20260911150000_journey_rewards.sql', import.meta.url), 'utf8');
 const lockdownMigration = await readFile(new URL('../supabase/migrations/20260911153000_lock_down_journey_reward_rpcs.sql', import.meta.url), 'utf8');
+const customAliasMigration = await readFile(new URL('../supabase/migrations/20260912100000_custom_journey_alias.sql', import.meta.url), 'utf8');
 
 assert.ok(
   screen.indexOf('<Card style={styles.progressCard}>') < screen.indexOf('<JourneyStatusCard'),
@@ -84,21 +85,23 @@ assert.doesNotMatch(screen.slice(screen.indexOf('if (authLoading || !ready')), /
 
 assert.match(statusCard, /Journey Points celebrate your reading progress.not spiritual worth\./u);
 assert.match(statusCard, /View Leaderboard/u);
-assert.match(statusCard, /Sign in with Google to receive an alias and join the leaderboard\./u);
+assert.match(statusCard, /Sign in with Google to choose a leaderboard name and join the community\./u);
 
 assert.match(service, /supabase\.rpc\('ensure_journey_profile'\)/u);
-assert.match(service, /supabase\.rpc\('reroll_journey_alias'\)/u);
+assert.match(service, /supabase\.rpc\('update_journey_alias', \{ p_alias: nextAlias \}\)/u);
 assert.match(service, /supabase\.rpc\('get_journey_leaderboard'\)/u);
 assert.match(profileHook, /if \(!userId\)[^]*setAlias\(null\)/u, 'Signed-out readers must not request a public alias');
-assert.match(profileHook, /catch \{[^]*setError\(true\)/u, 'Profile failures must stay contained in the optional reward layer');
+assert.match(profileHook, /setError\(true\)/u, 'Profile failures must stay contained in the optional reward layer');
 
 assert.match(leaderboardModal, /if \(!visible \|\| !signedIn\)[^]*return;/u, 'A guest must never trigger the authenticated leaderboard RPC');
 assert.match(leaderboardModal, /data=\{signedIn \? entries : \[\]\}/u);
 assert.match(leaderboardModal, /Sign In with Google to Join/u);
-assert.match(leaderboardModal, />Change alias</u);
+assert.match(leaderboardModal, /delayLongPress=\{1400\}/u);
+assert.match(leaderboardModal, /now - lastAliasTapRef\.current <= 450/u);
+assert.doesNotMatch(leaderboardModal, />Change alias</u);
 assert.match(leaderboardModal, /isCurrentUser && styles\.currentEntry/u);
 assert.match(leaderboardModal, /item\.rank[^]*item\.alias[^]*item\.journeyPoints[^]*item\.completedChapters/u);
-assert.doesNotMatch(leaderboardModal, /TextInput|session\.user|user_id|avatar_url|full_name/u, 'The leaderboard must use only server-safe public fields and curated aliases');
+assert.doesNotMatch(leaderboardModal, /session\.user|user_id|avatar_url|full_name/u, 'The leaderboard must use only server-safe public fields');
 assert.doesNotMatch(`${statusCard}\n${leaderboardModal}\n${profileHook}\n${service}`, /streak|demotion|spiritual level/iu);
 
 assert.match(migration, /alter table public\.journey_reward_profiles enable row level security/iu);
@@ -113,5 +116,8 @@ assert.match(lockdownMigration, /ensure_journey_profile\(\) from public, anon/iu
 assert.match(lockdownMigration, /reroll_journey_alias\(\) from public, anon/iu);
 assert.match(lockdownMigration, /get_journey_leaderboard\(\) from public, anon/iu);
 assert.match(lockdownMigration, /grant execute on function public\.get_journey_leaderboard\(\) to authenticated/iu);
+assert.match(customAliasMigration, /create or replace function public\.update_journey_alias\(p_alias text\)/iu);
+assert.match(customAliasMigration, /where user_id = current_user_id/iu);
+assert.match(customAliasMigration, /update_journey_alias\(text\)[^]*from public, anon, authenticated/iu);
 
 console.log('Journey Points, milestone, alias, privacy, offline, and leaderboard checks passed.');

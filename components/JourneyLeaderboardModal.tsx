@@ -3,11 +3,14 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,12 +25,12 @@ type JourneyLeaderboardModalProps = {
   alias: string | null;
   aliasLoading: boolean;
   aliasError: boolean;
-  aliasRerolling: boolean;
+  aliasSaving: boolean;
   signInBusy: boolean;
   onRequestClose: () => void;
   onSignIn: () => Promise<void>;
   onRetryAlias: () => Promise<string | null>;
-  onChangeAlias: () => Promise<string | null>;
+  onSaveAlias: (alias: string) => Promise<string | null>;
 };
 
 export function JourneyLeaderboardModal({
@@ -36,12 +39,12 @@ export function JourneyLeaderboardModal({
   alias,
   aliasLoading,
   aliasError,
-  aliasRerolling,
+  aliasSaving,
   signInBusy,
   onRequestClose,
   onSignIn,
   onRetryAlias,
-  onChangeAlias,
+  onSaveAlias,
 }: JourneyLeaderboardModalProps) {
   const insets = useSafeAreaInsets();
   const loadGenerationRef = useRef(0);
@@ -49,6 +52,10 @@ export function JourneyLeaderboardModal({
   const [loading, setLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [aliasEditorOpen, setAliasEditorOpen] = useState(false);
+  const [aliasDraft, setAliasDraft] = useState('');
+  const lastAliasTapRef = useRef(0);
+  const aliasLongPressFiredRef = useRef(false);
 
   const loadLeaderboard = useCallback(async () => {
     const generation = ++loadGenerationRef.current;
@@ -95,25 +102,40 @@ export function JourneyLeaderboardModal({
     };
   }, [signedIn, visible]);
 
-  async function performAliasChange() {
-    const changed = await onChangeAlias();
-    if (!changed) {
-      Alert.alert('Alias not changed', 'A new alias could not be chosen right now. Please try again later.');
-      return;
-    }
-    await loadLeaderboard();
+  function openAliasEditor() {
+    if (!signedIn || !alias || aliasSaving) return;
+    setAliasDraft(alias);
+    setAliasEditorOpen(true);
   }
 
-  function confirmAliasChange() {
-    if (!alias || aliasRerolling) return;
-    Alert.alert(
-      'Change your alias?',
-      'A new friendly alias will be selected for you. Public names cannot be typed or customized.',
-      [
-        { text: 'Keep This Alias', style: 'cancel' },
-        { text: 'Change alias', onPress: () => { void performAliasChange(); } },
-      ],
-    );
+  function handleAliasPress() {
+    if (aliasLongPressFiredRef.current) {
+      aliasLongPressFiredRef.current = false;
+      return;
+    }
+    const now = Date.now();
+    if (now - lastAliasTapRef.current <= 450) {
+      lastAliasTapRef.current = 0;
+      openAliasEditor();
+    } else {
+      lastAliasTapRef.current = now;
+    }
+  }
+
+  async function saveAlias() {
+    const clean = aliasDraft.trim().replace(/\s+/g, ' ');
+    if (clean.length < 3 || clean.length > 40 || /[<>\u0000-\u001F\u007F]/.test(clean)) {
+      Alert.alert('Check the name', 'Enter a leaderboard name between 3 and 40 characters.');
+      return;
+    }
+    try {
+      const changed = await onSaveAlias(clean);
+      if (!changed) throw new Error('Your leaderboard name could not be saved right now.');
+      setAliasEditorOpen(false);
+      await loadLeaderboard();
+    } catch (caught) {
+      Alert.alert('Name not saved', caught instanceof Error ? caught.message : 'Please try again.');
+    }
   }
 
   const header = (
@@ -131,27 +153,29 @@ export function JourneyLeaderboardModal({
 
       {!signedIn ? (
         <View style={styles.joinCard}>
-          <Text style={styles.joinTitle}>Join with a safe alias</Text>
-          <Text style={styles.joinBody}>Sign in with Google to receive a friendly random alias and view the leaderboard. Your name, email, photo, and account ID are never shown here.</Text>
+          <Text style={styles.joinTitle}>Join with a public leaderboard name</Text>
+          <Text style={styles.joinBody}>Sign in with Google to view the leaderboard. You can customize your public name; your email, photo, and account ID are never shown here.</Text>
           <GoldButton title="Sign In with Google to Join" loading={signInBusy} onPress={() => { void onSignIn(); }} />
         </View>
       ) : (
         <View style={styles.aliasCard}>
           <View style={styles.aliasCopy}>
             <Text style={styles.aliasLabel}>YOUR PUBLIC ALIAS</Text>
-            {aliasLoading ? <ActivityIndicator color={colors.gold} size="small" /> : <Text style={styles.alias}>{alias ?? 'Unavailable right now'}</Text>}
+            {aliasLoading ? <ActivityIndicator color={colors.gold} size="small" /> : alias ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${alias}. Double-tap or press and hold to change your leaderboard name.`}
+                delayLongPress={1400}
+                disabled={aliasSaving}
+                onLongPress={() => { aliasLongPressFiredRef.current = true; openAliasEditor(); }}
+                onPress={handleAliasPress}
+              >
+                <Text style={styles.alias}>{alias}</Text>
+                <Text style={styles.aliasHint}>Double-tap or press and hold to change.</Text>
+              </Pressable>
+            ) : <Text style={styles.alias}>Unavailable right now</Text>}
           </View>
-          {alias ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Change alias"
-              disabled={aliasRerolling}
-              onPress={confirmAliasChange}
-              style={({ pressed }) => [styles.aliasButton, pressed && styles.pressed, aliasRerolling && styles.disabled]}
-            >
-              {aliasRerolling ? <ActivityIndicator color={colors.gold} size="small" /> : <Text style={styles.aliasButtonText}>Change alias</Text>}
-            </Pressable>
-          ) : aliasError && !aliasLoading ? (
+          {!alias && aliasError && !aliasLoading ? (
             <Pressable accessibilityRole="button" onPress={() => { void onRetryAlias(); }} style={styles.aliasButton}>
               <Text style={styles.aliasButtonText}>Retry Alias</Text>
             </Pressable>
@@ -188,7 +212,17 @@ export function JourneyLeaderboardModal({
               <View style={[styles.rankBadge, item.isCurrentUser && styles.currentRankBadge]}><Text style={[styles.rank, item.isCurrentUser && styles.currentRank]}>#{item.rank}</Text></View>
               <View style={styles.entryCopy}>
                 <View style={styles.entryTitleRow}>
-                  <Text numberOfLines={2} style={styles.entryAlias}>{item.alias}</Text>
+                  {item.isCurrentUser ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`${item.alias}. Double-tap or press and hold to change your leaderboard name.`}
+                      delayLongPress={1400}
+                      onLongPress={() => { aliasLongPressFiredRef.current = true; openAliasEditor(); }}
+                      onPress={handleAliasPress}
+                    >
+                      <Text numberOfLines={2} style={styles.entryAlias}>{item.alias}</Text>
+                    </Pressable>
+                  ) : <Text numberOfLines={2} style={styles.entryAlias}>{item.alias}</Text>}
                   {item.isCurrentUser ? <Text style={styles.youBadge}>YOU</Text> : null}
                 </View>
                 <Text style={styles.entryMeta}>{item.completedChapters} chapter{item.completedChapters === 1 ? '' : 's'} completed</Text>
@@ -204,6 +238,31 @@ export function JourneyLeaderboardModal({
           refreshControl={signedIn ? <RefreshControl refreshing={loading} onRefresh={() => { void loadLeaderboard(); }} tintColor={colors.gold} colors={[colors.gold]} /> : undefined}
           ListFooterComponent={<Pressable accessibilityRole="button" onPress={onRequestClose} style={styles.doneButton}><Text style={styles.doneButtonText}>Close Leaderboard</Text></Pressable>}
         />
+        <Modal visible={visible && aliasEditorOpen} transparent animationType="fade" onRequestClose={() => setAliasEditorOpen(false)}>
+          <View style={styles.editorScrim}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Close name editor" onPress={() => setAliasEditorOpen(false)} style={styles.editorBackdrop} />
+            <KeyboardAvoidingView pointerEvents="box-none" behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.editorCenter}>
+              <View style={styles.editorCard}>
+                <Text style={styles.editorTitle}>Your leaderboard name</Text>
+                <Text style={styles.editorBody}>This name is public and appears on both Journey leaderboards. Your account details remain private.</Text>
+                <TextInput
+                  accessibilityLabel="Leaderboard name"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  maxLength={40}
+                  onChangeText={setAliasDraft}
+                  selectTextOnFocus
+                  style={styles.editorInput}
+                  value={aliasDraft}
+                />
+                <View style={styles.editorActions}>
+                  <Pressable disabled={aliasSaving} onPress={() => setAliasEditorOpen(false)} style={styles.editorButton}><Text style={styles.editorCancel}>Cancel</Text></Pressable>
+                  <Pressable disabled={aliasSaving} onPress={() => { void saveAlias(); }} style={[styles.editorButton, styles.editorSave, aliasSaving && styles.disabled]}><Text style={styles.editorSaveText}>{aliasSaving ? 'Saving…' : 'Save'}</Text></Pressable>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </Modal>
       </View>
     </Modal>
   );
@@ -226,6 +285,7 @@ const styles = StyleSheet.create({
   aliasCopy: { flex: 1, gap: 5 },
   aliasLabel: { color: colors.muted, fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1.3 },
   alias: { color: colors.gold, fontSize: 18, lineHeight: 23, fontWeight: '900' },
+  aliasHint: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 3 },
   aliasButton: { minHeight: 42, minWidth: 104, paddingHorizontal: 12, borderRadius: 13, borderWidth: 1, borderColor: colors.gold, alignItems: 'center', justifyContent: 'center' },
   aliasButtonText: { color: colors.gold, fontSize: 12, fontWeight: '900' },
   listHeading: { color: colors.muted, fontSize: 10, lineHeight: 15, fontWeight: '900', letterSpacing: 1.5, marginTop: 24 },
@@ -249,6 +309,18 @@ const styles = StyleSheet.create({
   separator: { height: 9 },
   doneButton: { minHeight: 48, marginTop: 18, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.gold },
   doneButtonText: { color: colors.charcoal, fontSize: 14, fontWeight: '900' },
+  editorScrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.78)' },
+  editorBackdrop: { ...StyleSheet.absoluteFill },
+  editorCenter: { flex: 1, justifyContent: 'center', padding: 20 },
+  editorCard: { borderRadius: 20, borderWidth: 1, borderColor: colors.gold, backgroundColor: colors.panel, padding: 21, gap: 13 },
+  editorTitle: { color: colors.text, fontSize: 25, lineHeight: 31, fontWeight: '900' },
+  editorBody: { color: colors.ivory, fontSize: 14, lineHeight: 21 },
+  editorInput: { minHeight: 56, borderRadius: 13, borderWidth: 2, borderColor: colors.gold, backgroundColor: colors.text, color: colors.charcoal, paddingHorizontal: 14, fontSize: 19 },
+  editorActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 11 },
+  editorButton: { minHeight: 48, minWidth: 96, alignItems: 'center', justifyContent: 'center', borderRadius: 13, paddingHorizontal: 14 },
+  editorSave: { backgroundColor: colors.gold },
+  editorCancel: { color: colors.text, fontSize: 15, fontWeight: '900' },
+  editorSaveText: { color: colors.charcoal, fontSize: 15, fontWeight: '900' },
   pressed: { opacity: .78 },
   disabled: { opacity: .5 },
 });
