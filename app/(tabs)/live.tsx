@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
 import { ReminderPickerModal } from '@/components/ReminderPickerModal';
 import { colors } from '@/constants/theme';
+import { WHATSAPP_GROUP_URL } from '@/constants/links';
 import { countdownParts, localDiscussionLabel, nextDiscussionDate, type LiveDiscussion } from '@/lib/liveDiscussion';
 import { scheduleDiscussionReminder } from '@/lib/notifications';
 import { supabase } from '@/lib/supabase';
@@ -33,7 +34,7 @@ export default function LiveScreen() {
   }
 
   return (
-    <View style={styles.page}>
+    <ScrollView style={styles.page} contentContainerStyle={styles.content}>
       {discussion && next && cd ? (
         <Card>
           <Eyebrow>NEXT LIVE DISCUSSION</Eyebrow>
@@ -53,13 +54,20 @@ export default function LiveScreen() {
           </View>
         </Card>
       ) : <Text style={styles.loading}>Loading the next discussion…</Text>}
+      <Card style={styles.whatsappCard}>
+        <Eyebrow>FELLOWSHIP BETWEEN LIVE DISCUSSIONS</Eyebrow>
+        <Text style={styles.invitationTitle}>Join the Try Jesus Media WhatsApp group</Text>
+        <Text style={styles.invitationBody}>Fellowship with others in this community, ask Bible questions, request prayer, share insights, and keep the conversation going between our live Zoom discussions.</Text>
+        <GoldButton title="Join the WhatsApp Group" onPress={() => Linking.openURL(WHATSAPP_GROUP_URL)} />
+      </Card>
       <ReminderPickerModal visible={reminderOpen} onRequestClose={() => setReminderOpen(false)} onSelect={remind} />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.charcoal, padding: 20, paddingTop: 52 },
+  page: { flex: 1, backgroundColor: colors.charcoal },
+  content: { padding: 20, paddingTop: 52, paddingBottom: 110, gap: 18 },
   title: { color: colors.text, fontSize: 25, fontWeight: '900', lineHeight: 31 },
   note: { color: colors.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
   countdown: { flexDirection: 'row', gap: 8, marginVertical: 18 },
@@ -67,5 +75,8 @@ const styles = StyleSheet.create({
   timeNum: { color: colors.gold, fontSize: 24, fontWeight: '900' },
   timeLabel: { color: colors.muted, fontSize: 9, letterSpacing: 1.5, fontWeight: '800' },
   buttons: { gap: 10 },
+  whatsappCard: { backgroundColor: colors.panel2, borderColor: colors.gold },
+  invitationTitle: { color: colors.text, fontSize: 23, lineHeight: 29, fontWeight: '900', marginBottom: 9 },
+  invitationBody: { color: colors.ivory, fontSize: 16, lineHeight: 24, marginBottom: 17 },
   loading: { color: colors.muted },
 });

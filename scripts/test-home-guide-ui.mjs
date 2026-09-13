@@ -24,6 +24,10 @@ for (const label of ['24 hours before', '1 hour before', '15 minutes before', 'A
 }
 assert.ok(home.indexOf('NEXT LIVE DISCUSSION') < home.indexOf('FELLOWSHIP BETWEEN LIVE DISCUSSIONS'));
 assert.match(home, /Linking\.openURL\(WHATSAPP_GROUP_URL\)/);
+assert.ok(live.indexOf('NEXT LIVE DISCUSSION') < live.indexOf('FELLOWSHIP BETWEEN LIVE DISCUSSIONS'));
+assert.match(live, /Join the Try Jesus Media WhatsApp group/);
+assert.match(live, /Linking\.openURL\(WHATSAPP_GROUP_URL\)/);
+assert.match(live, /contentContainerStyle=\{styles\.content\}/);
 assert.match(more, /Powered by FaithCraft\.Agency/);
 assert.match(more, /Linking\.openURL\('https:\/\/faithcraft\.agency\/'\)/);
 
