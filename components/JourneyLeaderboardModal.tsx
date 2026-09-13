@@ -22,28 +22,20 @@ import type { JourneyLeaderboardEntry } from '@/lib/journeyRewardsCore';
 type JourneyLeaderboardModalProps = {
   visible: boolean;
   signedIn: boolean;
-  alias: string | null;
-  aliasLoading: boolean;
-  aliasError: boolean;
   aliasSaving: boolean;
   signInBusy: boolean;
   onRequestClose: () => void;
   onSignIn: () => Promise<void>;
-  onRetryAlias: () => Promise<string | null>;
   onSaveAlias: (alias: string) => Promise<string | null>;
 };
 
 export function JourneyLeaderboardModal({
   visible,
   signedIn,
-  alias,
-  aliasLoading,
-  aliasError,
   aliasSaving,
   signInBusy,
   onRequestClose,
   onSignIn,
-  onRetryAlias,
   onSaveAlias,
 }: JourneyLeaderboardModalProps) {
   const insets = useSafeAreaInsets();
@@ -54,8 +46,6 @@ export function JourneyLeaderboardModal({
   const [loadError, setLoadError] = useState(false);
   const [aliasEditorOpen, setAliasEditorOpen] = useState(false);
   const [aliasDraft, setAliasDraft] = useState('');
-  const lastAliasTapRef = useRef(0);
-  const aliasLongPressFiredRef = useRef(false);
 
   const loadLeaderboard = useCallback(async () => {
     const generation = ++loadGenerationRef.current;
@@ -102,24 +92,10 @@ export function JourneyLeaderboardModal({
     };
   }, [signedIn, visible]);
 
-  function openAliasEditor() {
-    if (!signedIn || !alias || aliasSaving) return;
-    setAliasDraft(alias);
+  function openAliasEditor(currentAlias: string) {
+    if (!signedIn || !currentAlias || aliasSaving) return;
+    setAliasDraft(currentAlias);
     setAliasEditorOpen(true);
-  }
-
-  function handleAliasPress() {
-    if (aliasLongPressFiredRef.current) {
-      aliasLongPressFiredRef.current = false;
-      return;
-    }
-    const now = Date.now();
-    if (now - lastAliasTapRef.current <= 450) {
-      lastAliasTapRef.current = 0;
-      openAliasEditor();
-    } else {
-      lastAliasTapRef.current = now;
-    }
   }
 
   async function saveAlias() {
@@ -149,7 +125,7 @@ export function JourneyLeaderboardModal({
           <Text style={styles.closeButtonText}>×</Text>
         </Pressable>
       </View>
-      <Text style={styles.supportiveCopy}>Journey Points celebrate reading progress—not spiritual worth. Every chapter read is worth celebrating.</Text>
+      <Text style={styles.supportiveCopy}>Journey Points celebrate reading progress. Every chapter read is worth celebrating.</Text>
 
       {!signedIn ? (
         <View style={styles.joinCard}>
@@ -157,31 +133,7 @@ export function JourneyLeaderboardModal({
           <Text style={styles.joinBody}>Sign in with Google to view the leaderboard. You can customize your public name; your email, photo, and account ID are never shown here.</Text>
           <GoldButton title="Sign In with Google to Join" loading={signInBusy} onPress={() => { void onSignIn(); }} />
         </View>
-      ) : (
-        <View style={styles.aliasCard}>
-          <View style={styles.aliasCopy}>
-            <Text style={styles.aliasLabel}>YOUR PUBLIC ALIAS</Text>
-            {aliasLoading ? <ActivityIndicator color={colors.gold} size="small" /> : alias ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`${alias}. Double-tap or press and hold to change your leaderboard name.`}
-                delayLongPress={1400}
-                disabled={aliasSaving}
-                onLongPress={() => { aliasLongPressFiredRef.current = true; openAliasEditor(); }}
-                onPress={handleAliasPress}
-              >
-                <Text style={styles.alias}>{alias}</Text>
-                <Text style={styles.aliasHint}>Double-tap or press and hold to change.</Text>
-              </Pressable>
-            ) : <Text style={styles.alias}>Unavailable right now</Text>}
-          </View>
-          {!alias && aliasError && !aliasLoading ? (
-            <Pressable accessibilityRole="button" onPress={() => { void onRetryAlias(); }} style={styles.aliasButton}>
-              <Text style={styles.aliasButtonText}>Retry Alias</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      )}
+      ) : null}
 
       {signedIn ? <Text style={styles.listHeading}>ALL READERS</Text> : null}
     </View>
@@ -215,12 +167,12 @@ export function JourneyLeaderboardModal({
                   {item.isCurrentUser ? (
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`${item.alias}. Double-tap or press and hold to change your leaderboard name.`}
+                      accessibilityLabel={`${item.alias}. Press and hold to customize your leaderboard name.`}
                       delayLongPress={1400}
-                      onLongPress={() => { aliasLongPressFiredRef.current = true; openAliasEditor(); }}
-                      onPress={handleAliasPress}
+                      onLongPress={() => openAliasEditor(item.alias)}
                     >
                       <Text numberOfLines={2} style={styles.entryAlias}>{item.alias}</Text>
+                      <Text style={styles.entryAliasHint}>Press and hold your name to customize it</Text>
                     </Pressable>
                   ) : <Text numberOfLines={2} style={styles.entryAlias}>{item.alias}</Text>}
                   {item.isCurrentUser ? <Text style={styles.youBadge}>YOU</Text> : null}
@@ -281,13 +233,6 @@ const styles = StyleSheet.create({
   joinCard: { marginTop: 18, padding: 18, gap: 10, borderRadius: 18, borderWidth: 1, borderColor: colors.gold, backgroundColor: colors.plum },
   joinTitle: { color: colors.text, fontSize: 19, lineHeight: 24, fontWeight: '900' },
   joinBody: { color: colors.ivory, fontSize: 13, lineHeight: 20, marginBottom: 3 },
-  aliasCard: { minHeight: 76, marginTop: 18, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.panel2, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  aliasCopy: { flex: 1, gap: 5 },
-  aliasLabel: { color: colors.muted, fontSize: 9, lineHeight: 13, fontWeight: '900', letterSpacing: 1.3 },
-  alias: { color: colors.gold, fontSize: 18, lineHeight: 23, fontWeight: '900' },
-  aliasHint: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 3 },
-  aliasButton: { minHeight: 42, minWidth: 104, paddingHorizontal: 12, borderRadius: 13, borderWidth: 1, borderColor: colors.gold, alignItems: 'center', justifyContent: 'center' },
-  aliasButtonText: { color: colors.gold, fontSize: 12, fontWeight: '900' },
   listHeading: { color: colors.muted, fontSize: 10, lineHeight: 15, fontWeight: '900', letterSpacing: 1.5, marginTop: 24 },
   stateCard: { minHeight: 170, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.panel, padding: 20, alignItems: 'center', justifyContent: 'center', gap: 12 },
   stateTitle: { color: colors.text, fontSize: 18, fontWeight: '900', textAlign: 'center' },
@@ -301,6 +246,7 @@ const styles = StyleSheet.create({
   entryCopy: { flex: 1, minWidth: 0 },
   entryTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   entryAlias: { flexShrink: 1, color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: '900' },
+  entryAliasHint: { color: colors.gold, fontSize: 9, lineHeight: 14, fontWeight: '800', marginTop: 2 },
   youBadge: { color: colors.charcoal, backgroundColor: colors.gold, borderRadius: 8, overflow: 'hidden', paddingHorizontal: 6, paddingVertical: 3, fontSize: 8, fontWeight: '900', letterSpacing: .8 },
   entryMeta: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 3 },
   entryPoints: { alignItems: 'flex-end' },

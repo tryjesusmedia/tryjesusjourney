@@ -15,7 +15,7 @@ import {
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { JourneyLeaderboardModal } from '@/components/JourneyLeaderboardModal';
-import { JourneyStatusCard } from '@/components/JourneyStatusCard';
+import { JourneyProgressRewards } from '@/components/JourneyStatusCard';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
 import { colors } from '@/constants/theme';
 import {
@@ -247,14 +247,8 @@ export default function ChronologicalBibleScreen() {
             <View style={styles.progressHeading}><View><Eyebrow>YOUR PROGRESS</Eyebrow><Text style={styles.progressNumber}>{percent}% complete</Text></View><Text style={styles.progressCount}>{progress.completed.length}/{chronologicalPlanMeta.chapterCount}</Text></View>
             <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${percent}%` }]} /></View>
             <GoldButton title="Continue Reading" onPress={continueReading} />
+            <JourneyProgressRewards summary={journeyRewards} onOpenLeaderboard={() => setLeaderboardVisible(true)} />
           </Card>
-          <JourneyStatusCard
-            summary={journeyRewards}
-            signedIn={Boolean(sessionUserId)}
-            alias={journeyProfile.alias}
-            aliasLoading={journeyProfile.loading}
-            onOpenLeaderboard={() => setLeaderboardVisible(true)}
-          />
         </>
       )}
     </View>
@@ -322,14 +316,10 @@ export default function ChronologicalBibleScreen() {
         key={sessionUserId ?? 'guest'}
         visible={leaderboardVisible}
         signedIn={Boolean(sessionUserId)}
-        alias={journeyProfile.alias}
-        aliasLoading={journeyProfile.loading}
-        aliasError={journeyProfile.error}
         aliasSaving={journeyProfile.saving}
         signInBusy={syncBusy || authLoading}
         onRequestClose={() => setLeaderboardVisible(false)}
         onSignIn={connectGoogle}
-        onRetryAlias={journeyProfile.refresh}
         onSaveAlias={journeyProfile.saveAlias}
       />
     </KeyboardAvoidingView>

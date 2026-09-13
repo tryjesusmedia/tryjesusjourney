@@ -13,7 +13,7 @@ const bibleDecodedUrl = 'https://try-jesus-new-york-shop.fourthwall.com/products
 const bibleDecodedBlurb = "What if the Bible contains layers of meaning you've never noticed before? Discover simply study techniques that can help Scripture come alive, reveal powerful connections, and turn ordinary Bible reading into an eye-opening journey of discovery.";
 assert.match(home, new RegExp(bibleDecodedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 assert.ok(home.includes(bibleDecodedBlurb), 'Bible Decoded must use the requested blurb');
-assert.ok(home.indexOf('styles.bibleDecodedCard') < home.indexOf('styles.hero'), 'Bible Decoded must be the first home card');
+assert.ok(home.indexOf('styles.readingCard') < home.indexOf('styles.bibleDecodedCard'), 'Chron Bible must appear above Bible Decoded');
 for (const screen of [home, live]) {
   assert.match(screen, /<ReminderPickerModal visible=\{reminderOpen\} onRequestClose=\{\(\) => setReminderOpen\(false\)\} onSelect=\{remind\} \/>/);
 }

@@ -118,6 +118,13 @@ export default function HomeScreen() {
       <ScrollView style={styles.page} contentContainerStyle={styles.content} refreshControl={<RefreshControl tintColor={colors.gold} refreshing={refreshing} onRefresh={refresh} />}>
         <View style={styles.header}><View><Text style={styles.brand}>TRY JESUS</Text><Text style={styles.media}>THE JOURNEY</Text></View><Image source={require('@/assets/logo.png')} style={styles.mark} /></View>
 
+      <Card style={styles.readingCard}>
+        <Eyebrow>READ SCRIPTURE IN HISTORICAL SEQUENCE</Eyebrow>
+        <Text style={styles.sectionTitle}>Chronological Bible</Text>
+        <Text style={styles.body}>Read the full journey inside the app in KJV or WEB. Your progress and optional cross-device sync stay with you.</Text>
+        <GoldButton title="Read Chronological Bible" onPress={() => router.push('/chronological')} />
+      </Card>
+
       <Card style={styles.bibleDecodedCard}>
         <Image source={BIBLE_DECODED_THUMBNAIL} style={styles.bibleDecodedImage} accessibilityLabel="Bible Decoded by Pastor Kal Roller" />
         <Eyebrow>FEATURED RESOURCE</Eyebrow>
@@ -131,13 +138,6 @@ export default function HomeScreen() {
         <Text style={styles.heroTitle}>{progress ? 'Pick up where you left off.' : 'Your next discovery is waiting.'}</Text>
         <Text style={styles.body}>{progress ? `${Math.round(progress.progress_percent ?? 0)}% through your current guide. Your place is saved.` : 'Explore the Bible privately, ask honest questions, and follow the evidence wherever it leads.'}</Text>
         <GoldButton title={progress ? 'Continue My Bible Guides' : 'Begin My Bible Guides'} onPress={() => router.push('/(tabs)/journey')} />
-      </Card>
-
-      <Card style={styles.readingCard}>
-        <Eyebrow>READ SCRIPTURE IN HISTORICAL SEQUENCE</Eyebrow>
-        <Text style={styles.sectionTitle}>Chronological Bible</Text>
-        <Text style={styles.body}>Read the full journey inside the app in KJV or WEB. Your progress and optional cross-device sync stay with you.</Text>
-        <GoldButton title="Read Chronological Bible" onPress={() => router.push('/chronological')} />
       </Card>
 
       {products.length ? <View>

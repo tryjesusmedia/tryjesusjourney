@@ -74,18 +74,16 @@ const migration = await readFile(new URL('../supabase/migrations/20260911150000_
 const lockdownMigration = await readFile(new URL('../supabase/migrations/20260911153000_lock_down_journey_reward_rpcs.sql', import.meta.url), 'utf8');
 const customAliasMigration = await readFile(new URL('../supabase/migrations/20260912100000_custom_journey_alias.sql', import.meta.url), 'utf8');
 
-assert.ok(
-  screen.indexOf('<Card style={styles.progressCard}>') < screen.indexOf('<JourneyStatusCard'),
-  'Journey status belongs immediately after the existing Chron progress card',
-);
+assert.match(screen, /<Card style=\{styles\.progressCard\}>[^]*<GoldButton title="Continue Reading"[^]*<JourneyProgressRewards/u, 'Journey rewards belong inside Your Progress below Continue Reading');
 assert.match(screen, /summarizeJourneyRewards\(progress\.completed\)/u, 'Offline points must derive from current on-phone progress');
 assert.match(screen, /<JourneyLeaderboardModal/u);
 assert.doesNotMatch(screen, /scrollTo(?:Offset|Index)/u, 'Opening the modal must not move the Chron reading list');
 assert.doesNotMatch(screen.slice(screen.indexOf('if (authLoading || !ready')), /journeyProfile\.loading[^]*return/u, 'Profile network state must never gate the Bible screen');
 
-assert.match(statusCard, /Journey Points celebrate your reading progress.not spiritual worth\./u);
 assert.match(statusCard, /View Leaderboard/u);
-assert.match(statusCard, /Sign in with Google to choose a leaderboard name and join the community\./u);
+assert.match(statusCard, /MILESTONE REACHED/u);
+assert.match(statusCard, /NEXT MILESTONE/u);
+assert.doesNotMatch(statusCard, /not spiritual worth|alias|<Card/iu);
 
 assert.match(service, /supabase\.rpc\('ensure_journey_profile'\)/u);
 assert.match(service, /supabase\.rpc\('update_journey_alias', \{ p_alias: nextAlias \}\)/u);
@@ -97,8 +95,10 @@ assert.match(leaderboardModal, /if \(!visible \|\| !signedIn\)[^]*return;/u, 'A 
 assert.match(leaderboardModal, /data=\{signedIn \? entries : \[\]\}/u);
 assert.match(leaderboardModal, /Sign In with Google to Join/u);
 assert.match(leaderboardModal, /delayLongPress=\{1400\}/u);
-assert.match(leaderboardModal, /now - lastAliasTapRef\.current <= 450/u);
+assert.match(leaderboardModal, /onLongPress=\{\(\) => openAliasEditor\(item\.alias\)\}/u);
 assert.doesNotMatch(leaderboardModal, />Change alias</u);
+assert.doesNotMatch(leaderboardModal, /YOUR PUBLIC ALIAS|styles\.aliasCard/u);
+assert.doesNotMatch(leaderboardModal, /not spiritual worth/iu);
 assert.match(leaderboardModal, /isCurrentUser && styles\.currentEntry/u);
 assert.match(leaderboardModal, /item\.rank[^]*item\.alias[^]*item\.journeyPoints[^]*item\.completedChapters/u);
 assert.doesNotMatch(leaderboardModal, /session\.user|user_id|avatar_url|full_name/u, 'The leaderboard must use only server-safe public fields');
