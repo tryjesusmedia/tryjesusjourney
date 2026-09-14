@@ -47,7 +47,11 @@ type ChronologicalListItem =
 
 const emptyProgress: ChronologicalProgress = { completed: [], lastIndex: 0, updatedAt: '' };
 
-export default function ChronologicalBibleScreen() {
+type ChronologicalBibleContentProps = {
+  showBackButton?: boolean;
+};
+
+export function ChronologicalBibleContent({ showBackButton = true }: ChronologicalBibleContentProps) {
   const insets = useSafeAreaInsets();
   const loadGenerationRef = useRef(0);
   const { session, loading: authLoading, signInGoogle, signOut } = useAuth();
@@ -206,7 +210,9 @@ export default function ChronologicalBibleScreen() {
   const fixedHeader = (
     <View style={styles.fixedHeader}>
       <View style={styles.topbar}>
-        <Pressable onPress={() => router.back()} style={styles.backButton} accessibilityRole="button"><Text style={styles.backText}>‹ Back</Text></Pressable>
+        {showBackButton
+          ? <Pressable onPress={() => router.back()} style={styles.backButton} accessibilityRole="button"><Text style={styles.backText}>‹ Back</Text></Pressable>
+          : <View />}
         <View style={styles.topbarActions}>
           <Text style={styles.translation}>KJV + WEB · NATIVE</Text>
           <Pressable onPress={() => setMenuOpen((open) => !open)} style={[styles.menuButton, menuOpen ? styles.menuButtonOpen : undefined]} accessibilityRole="button" accessibilityLabel="Chron Bible menu" accessibilityState={{ expanded: menuOpen }}>
@@ -316,14 +322,18 @@ export default function ChronologicalBibleScreen() {
         key={sessionUserId ?? 'guest'}
         visible={leaderboardVisible}
         signedIn={Boolean(sessionUserId)}
-        aliasRerolling={journeyProfile.rerolling}
+        aliasSaving={journeyProfile.saving}
         signInBusy={syncBusy || authLoading}
         onRequestClose={() => setLeaderboardVisible(false)}
         onSignIn={connectGoogle}
-        onChangeAlias={journeyProfile.changeAlias}
+        onSaveAlias={journeyProfile.saveAlias}
       />
     </KeyboardAvoidingView>
   );
+}
+
+export default function ChronologicalBibleScreen() {
+  return <ChronologicalBibleContent />;
 }
 
 const styles = StyleSheet.create({

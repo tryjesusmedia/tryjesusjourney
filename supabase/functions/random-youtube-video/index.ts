@@ -26,18 +26,23 @@ Deno.serve(async (request: Request) => {
     const apiKey = Deno.env.get('YOUTUBE_API_KEY');
     if (!apiKey) throw new Error('YOUTUBE_API_KEY is not configured');
 
-    const uploadPlaylists: string[] = [];
+    const uploadPlaylists: { handle: string; playlistId: string }[] = [];
     for (const handle of channelHandles) {
       const channelData = await youtube('channels', { part: 'contentDetails', forHandle: handle }, apiKey);
       const uploads = channelData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
-      if (uploads) uploadPlaylists.push(uploads);
+      if (uploads) uploadPlaylists.push({ handle, playlistId: uploads });
     }
 
     const videoIds = new Set<string>();
-    for (const playlistId of uploadPlaylists) {
+    const videoSources = new Map<string, string>();
+    for (const { handle, playlistId } of uploadPlaylists) {
       const playlistData = await youtube('playlistItems', { part: 'contentDetails', playlistId, maxResults: '50' }, apiKey);
       for (const item of playlistData.items ?? []) {
-        if (item.contentDetails?.videoId) videoIds.add(item.contentDetails.videoId);
+        const videoId = item.contentDetails?.videoId;
+        if (videoId) {
+          videoIds.add(videoId);
+          if (!videoSources.has(videoId)) videoSources.set(videoId, handle);
+        }
       }
     }
 
@@ -53,14 +58,28 @@ Deno.serve(async (request: Request) => {
       return video.status?.privacyStatus === 'public'
         && durationSeconds(video.contentDetails?.duration ?? '') >= minimumLongFormSeconds
         && !/#shorts?\b/i.test(text);
+    }).sort((left, right) => {
+      const leftPublished = Date.parse(left.snippet?.publishedAt ?? '') || 0;
+      const rightPublished = Date.parse(right.snippet?.publishedAt ?? '') || 0;
+      return rightPublished - leftPublished;
     });
 
-    for (let index = longVideos.length - 1; index > 0; index -= 1) {
-      const randomIndex = Math.floor(Math.random() * (index + 1));
-      [longVideos[index], longVideos[randomIndex]] = [longVideos[randomIndex], longVideos[index]];
+    const selectedVideos: any[] = [];
+    for (const handle of channelHandles) {
+      const channelVideo = longVideos.find((video) => videoSources.get(video.id) === handle);
+      if (channelVideo) selectedVideos.push(channelVideo);
     }
+    for (const video of longVideos) {
+      if (selectedVideos.length >= 3) break;
+      if (!selectedVideos.some((selected) => selected.id === video.id)) selectedVideos.push(video);
+    }
+    selectedVideos.sort((left, right) => {
+      const leftPublished = Date.parse(left.snippet?.publishedAt ?? '') || 0;
+      const rightPublished = Date.parse(right.snippet?.publishedAt ?? '') || 0;
+      return rightPublished - leftPublished;
+    });
 
-    const videos = longVideos.slice(0, 3).map((video) => ({
+    const videos = selectedVideos.slice(0, 3).map((video) => ({
       videoId: video.id,
       title: video.snippet.title,
       thumbnail: video.snippet.thumbnails?.maxres?.url ?? video.snippet.thumbnails?.high?.url ?? video.snippet.thumbnails?.medium?.url,

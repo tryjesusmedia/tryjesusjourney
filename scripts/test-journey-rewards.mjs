@@ -73,7 +73,6 @@ const service = await readFile(new URL('../lib/journeyRewards.ts', import.meta.u
 const migration = await readFile(new URL('../supabase/migrations/20260911150000_journey_rewards.sql', import.meta.url), 'utf8');
 const lockdownMigration = await readFile(new URL('../supabase/migrations/20260911153000_lock_down_journey_reward_rpcs.sql', import.meta.url), 'utf8');
 const customAliasMigration = await readFile(new URL('../supabase/migrations/20260912100000_custom_journey_alias.sql', import.meta.url), 'utf8');
-const restoreAliasMigration = await readFile(new URL('../supabase/migrations/20260913140000_restore_system_journey_aliases.sql', import.meta.url), 'utf8');
 
 assert.match(screen, /<Card style=\{styles\.progressCard\}>[^]*<GoldButton title="Continue Reading"[^]*<JourneyProgressRewards/u, 'Journey rewards belong inside Your Progress below Continue Reading');
 assert.match(screen, /summarizeJourneyRewards\(progress\.completed\)/u, 'Offline points must derive from current on-phone progress');
@@ -87,8 +86,7 @@ assert.match(statusCard, /NEXT MILESTONE/u);
 assert.doesNotMatch(statusCard, /not spiritual worth|alias|<Card/iu);
 
 assert.match(service, /supabase\.rpc\('ensure_journey_profile'\)/u);
-assert.match(service, /supabase\.rpc\('reroll_journey_alias'\)/u);
-assert.doesNotMatch(service, /update_journey_alias|p_alias/u);
+assert.match(service, /supabase\.rpc\('update_journey_alias', \{ p_alias: nextAlias \}\)/u);
 assert.match(service, /supabase\.rpc\('get_journey_leaderboard'\)/u);
 assert.match(profileHook, /if \(!userId\)[^]*setAlias\(null\)/u, 'Signed-out readers must not request a public alias');
 assert.match(profileHook, /setError\(true\)/u, 'Profile failures must stay contained in the optional reward layer');
@@ -96,13 +94,15 @@ assert.match(profileHook, /setError\(true\)/u, 'Profile failures must stay conta
 assert.match(leaderboardModal, /if \(!visible \|\| !signedIn\)[^]*return;/u, 'A guest must never trigger the authenticated leaderboard RPC');
 assert.match(leaderboardModal, /data=\{signedIn \? entries : \[\]\}/u);
 assert.match(leaderboardModal, /Sign In with Google to Join/u);
-assert.match(leaderboardModal, /Join with a safe alias/u);
-assert.match(leaderboardModal, /Change random alias/u);
-assert.doesNotMatch(leaderboardModal, /TextInput|customize your public name|onLongPress/u);
+assert.match(leaderboardModal, /delayLongPress=\{1400\}/u);
+assert.match(leaderboardModal, /onLongPress=\{\(\) => openAliasEditor\(item\.alias\)\}/u);
+assert.match(leaderboardModal, />Change Name</u);
+assert.doesNotMatch(leaderboardModal, />Change alias</u);
+assert.doesNotMatch(leaderboardModal, /<View\s+accessible\s+accessibilityLabel=\{`\$\{item\.isCurrentUser/u, 'The row must not hide the nested Change Name button from screen readers');
 assert.doesNotMatch(leaderboardModal, /YOUR PUBLIC ALIAS|styles\.aliasCard/u);
 assert.doesNotMatch(leaderboardModal, /not spiritual worth/iu);
 assert.match(leaderboardModal, /isCurrentUser && styles\.currentEntry/u);
-assert.match(leaderboardModal, /item\.rank[^]*item\.alias[^]*item\.journeyPoints[^]*item\.completedChapters/u);
+assert.match(leaderboardModal, /item\.rank[^]*item\.alias[^]*item\.completedChapters[^]*item\.journeyPoints/u);
 assert.doesNotMatch(leaderboardModal, /session\.user|user_id|avatar_url|full_name/u, 'The leaderboard must use only server-safe public fields');
 assert.doesNotMatch(`${statusCard}\n${leaderboardModal}\n${profileHook}\n${service}`, /streak|demotion|spiritual level/iu);
 
@@ -121,9 +121,5 @@ assert.match(lockdownMigration, /grant execute on function public\.get_journey_l
 assert.match(customAliasMigration, /create or replace function public\.update_journey_alias\(p_alias text\)/iu);
 assert.match(customAliasMigration, /where user_id = current_user_id/iu);
 assert.match(customAliasMigration, /update_journey_alias\(text\)[^]*from public, anon, authenticated/iu);
-assert.match(restoreAliasMigration, /drop function if exists public\.update_journey_alias\(text\)/iu);
-assert.match(restoreAliasMigration, /journey_alias_from_seed/iu);
-assert.match(restoreAliasMigration, /update public\.journey_reward_profiles[^]*set alias = candidate_alias/iu);
-assert.doesNotMatch(`${screen}\n${leaderboardModal}\n${profileHook}\n${service}`, /update_journey_alias|public leaderboard name|customize your public name/iu);
 
 console.log('Journey Points, milestone, alias, privacy, offline, and leaderboard checks passed.');

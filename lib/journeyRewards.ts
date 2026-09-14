@@ -14,17 +14,17 @@ function rpcErrorMessage(error: unknown, fallback: string) {
 
 export async function ensureJourneyProfile() {
   const { data, error } = await supabase.rpc('ensure_journey_profile');
-  if (error) throw new Error(rpcErrorMessage(error, 'Your Journey alias is unavailable right now.'));
+  if (error) throw new Error(rpcErrorMessage(error, 'Your Journey leaderboard name is unavailable right now.'));
   const alias = normalizeJourneyAlias(data);
-  if (!alias) throw new Error('Your Journey alias is unavailable right now.');
+  if (!alias) throw new Error('Your Journey leaderboard name is unavailable right now.');
   return alias;
 }
 
-export async function rerollJourneyAlias() {
-  const { data, error } = await supabase.rpc('reroll_journey_alias');
-  if (error) throw new Error(rpcErrorMessage(error, 'A new Journey alias could not be selected right now.'));
+export async function updateJourneyAlias(nextAlias: string) {
+  const { data, error } = await supabase.rpc('update_journey_alias', { p_alias: nextAlias });
+  if (error) throw new Error(rpcErrorMessage(error, 'Your leaderboard name could not be saved right now.'));
   const alias = normalizeJourneyAlias(data);
-  if (!alias) throw new Error('A new Journey alias could not be selected right now.');
+  if (!alias) throw new Error('Your leaderboard name could not be saved right now.');
   return alias;
 }
 
