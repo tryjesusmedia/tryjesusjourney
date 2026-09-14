@@ -165,12 +165,11 @@ export function JourneyLeaderboardModal({
                   {item.isCurrentUser ? (
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`${item.alias}. Press and hold to customize your leaderboard name.`}
+                      accessibilityLabel={`${item.alias}, your leaderboard name`}
                       delayLongPress={1400}
                       onLongPress={() => openAliasEditor(item.alias)}
                     >
                       <Text numberOfLines={2} style={styles.entryAlias}>{item.alias}</Text>
-                      <Text style={styles.entryAliasHint}>Press and hold your name to customize it</Text>
                     </Pressable>
                   ) : <Text numberOfLines={2} style={styles.entryAlias}>{item.alias}</Text>}
                   {item.isCurrentUser ? <Text style={styles.youBadge}>YOU</Text> : null}
@@ -249,7 +248,6 @@ const styles = StyleSheet.create({
   entryCopy: { flex: 1, minWidth: 0 },
   entryTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   entryAlias: { flexShrink: 1, color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: '900' },
-  entryAliasHint: { color: colors.gold, fontSize: 9, lineHeight: 14, fontWeight: '800', marginTop: 2 },
   youBadge: { color: colors.charcoal, backgroundColor: colors.gold, borderRadius: 8, overflow: 'hidden', paddingHorizontal: 6, paddingVertical: 3, fontSize: 8, fontWeight: '900', letterSpacing: .8 },
   entryMeta: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 3 },
   changeNameButton: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', marginTop: 5, paddingHorizontal: 13, borderRadius: 10, borderWidth: 1, borderColor: colors.gold },
