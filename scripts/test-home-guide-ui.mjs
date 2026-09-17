@@ -16,7 +16,7 @@ const guideHome = await readFile(new URL('../app/(tabs)/journey.tsx', import.met
 const guideReader = await readFile(new URL('../app/guide-reader.tsx', import.meta.url), 'utf8');
 const reminderPicker = await readFile(new URL('../components/ReminderPickerModal.tsx', import.meta.url), 'utf8');
 
-const bibleDecodedUrl = 'https://try-jesus-new-york-shop.fourthwall.com/products/bible-decoded-by-pastor-kal-roller';
+const bibleDecodedUrl = 'https://tryjesusmedia.com/bibledecoded/';
 const bibleDecodedBlurb = "What if the Bible contains layers of meaning you've never noticed before? Discover simply study techniques that can help Scripture come alive, reveal powerful connections, and turn ordinary Bible reading into an eye-opening journey of discovery.";
 assert.match(links, new RegExp(bibleDecodedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 assert.ok(home.includes(bibleDecodedBlurb), 'Bible Decoded must use the requested blurb');

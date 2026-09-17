@@ -11,7 +11,7 @@ This is the first native Android/iOS Expo codebase for Try Jesus Media.
 - Bible guide WebView starting at `https://tryjesusmedia.com/welcome/`
 - Private on-device Prayer Journal
 - Latest-three YouTube Edge Function: `random-youtube-video`
-- Bible Decoded direct Fourthwall program link
+- Bible Decoded promotions link to https://tryjesusmedia.com/bibledecoded/
 - Thursday live discussion table + Eastern-time countdown
 - Zoom join link
 - Native local reminder scheduling
