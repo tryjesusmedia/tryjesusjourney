@@ -17,11 +17,16 @@ const guideReader = await readFile(new URL('../app/guide-reader.tsx', import.met
 const reminderPicker = await readFile(new URL('../components/ReminderPickerModal.tsx', import.meta.url), 'utf8');
 
 const bibleDecodedUrl = 'https://tryjesusmedia.com/bibledecoded/';
+const oldBibleDecodedUrl = 'https://try-jesus-new-york-shop.fourthwall.com/products/bible-decoded-by-pastor-kal-roller';
 const bibleDecodedBlurb = "What if the Bible contains layers of meaning you've never noticed before? Discover simply study techniques that can help Scripture come alive, reveal powerful connections, and turn ordinary Bible reading into an eye-opening journey of discovery.";
 assert.match(links, new RegExp(bibleDecodedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+assert.doesNotMatch(links, new RegExp(oldBibleDecodedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 assert.ok(home.includes(bibleDecodedBlurb), 'Bible Decoded must use the requested blurb');
 for (const screen of [home, bibleDecoded]) {
-  assert.match(screen, /Discounted from \$97 to \$37 for only the next 100 customers\./);
+  assert.match(screen, /<Text style=\{styles\.oldPrice\}>\$227<\/Text>/);
+  assert.match(screen, /<Text style=\{styles\.currentPrice\}>\$97!<\/Text>/);
+  assert.match(screen, /Current price for the next 100 customers\./);
+  assert.match(screen, /oldPrice:\s*\{[^}]*textDecorationLine:\s*'line-through'/);
 }
 const homeOffers = ['styles.readingCard', 'styles.bibleDecodedCard', 'styles.hero', '<YouTubeOffer />', '<LiveDiscussionOffer />', 'styles.whatsappCard', 'styles.askCard'];
 for (let index = 1; index < homeOffers.length; index += 1) {

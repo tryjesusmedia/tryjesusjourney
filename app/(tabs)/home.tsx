@@ -43,7 +43,11 @@ export default function HomeScreen() {
         <Eyebrow>FEATURED RESOURCE</Eyebrow>
         <Text style={styles.bibleDecodedTitle}>Bible Decoded</Text>
         <Text style={styles.body}>{BIBLE_DECODED_BLURB}</Text>
-        <Text style={styles.discount}>Discounted from $97 to $37 for only the next 100 customers.</Text>
+        <View accessible accessibilityLabel="Regular price 227 dollars. Current price 97 dollars for the next 100 customers." style={styles.offerPriceRow}>
+          <Text style={styles.oldPrice}>$227</Text>
+          <Text style={styles.currentPrice}>$97!</Text>
+        </View>
+        <Text style={styles.offerLimit}>Current price for the next 100 customers.</Text>
         <GoldButton title="Discover Bible Decoded" onPress={() => Linking.openURL(BIBLE_DECODED_URL)} />
       </Card>
 
@@ -79,5 +83,5 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   page:{flex:1,backgroundColor:colors.charcoal},content:{padding:20,paddingTop:52,gap:18},
   header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:4},brand:{color:colors.ivory,fontWeight:'900',fontSize:20,letterSpacing:.5},media:{color:colors.gold,fontWeight:'800',fontSize:11,letterSpacing:2.2},mark:{width:56,height:56},
-  bibleDecodedCard:{backgroundColor:colors.panel2,borderColor:colors.gold},bibleDecodedImage:{width:'100%',aspectRatio:16/9,borderRadius:16,marginBottom:16,backgroundColor:colors.plum},bibleDecodedTitle:{color:colors.text,fontSize:28,fontWeight:'900',lineHeight:34,marginBottom:8},discount:{color:colors.gold,fontSize:17,lineHeight:24,fontWeight:'900',marginTop:-6,marginBottom:18},whatsappCard:{backgroundColor:colors.panel2},hero:{backgroundColor:colors.plum,padding:24},readingCard:{borderColor:colors.gold,backgroundColor:colors.panel2},askCard:{backgroundColor:colors.panel2},heroTitle:{color:colors.text,fontSize:30,fontWeight:'800',lineHeight:36,marginBottom:10},body:{color:colors.ivory,fontSize:15,lineHeight:23,marginBottom:18},sectionTitle:{color:colors.text,fontSize:21,fontWeight:'800',lineHeight:27,marginBottom:8},meta:{color:colors.muted,fontSize:13,marginBottom:14}
+  bibleDecodedCard:{backgroundColor:colors.panel2,borderColor:colors.gold},bibleDecodedImage:{width:'100%',aspectRatio:16/9,borderRadius:16,marginBottom:16,backgroundColor:colors.plum},bibleDecodedTitle:{color:colors.text,fontSize:28,fontWeight:'900',lineHeight:34,marginBottom:8},offerPriceRow:{flexDirection:'row',alignItems:'baseline',gap:12,marginTop:-6,marginBottom:2},oldPrice:{color:colors.muted,fontSize:19,fontWeight:'800',textDecorationLine:'line-through'},currentPrice:{color:colors.gold,fontSize:29,lineHeight:35,fontWeight:'900'},offerLimit:{color:colors.gold,fontSize:16,lineHeight:23,fontWeight:'900',marginBottom:18},whatsappCard:{backgroundColor:colors.panel2},hero:{backgroundColor:colors.plum,padding:24},readingCard:{borderColor:colors.gold,backgroundColor:colors.panel2},askCard:{backgroundColor:colors.panel2},heroTitle:{color:colors.text,fontSize:30,fontWeight:'800',lineHeight:36,marginBottom:10},body:{color:colors.ivory,fontSize:15,lineHeight:23,marginBottom:18},sectionTitle:{color:colors.text,fontSize:21,fontWeight:'800',lineHeight:27,marginBottom:8},meta:{color:colors.muted,fontSize:13,marginBottom:14}
 });
