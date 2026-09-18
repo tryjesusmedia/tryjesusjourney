@@ -1,6 +1,6 @@
 {
   "name": "try-jesus-the-journey",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -16,7 +16,8 @@
     "test:journal-ask-ui": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-journal-ask-ui.mjs",
     "test:guide-reader-ui": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-guide-reader-ui.mjs",
     "test:bible-reader": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-bible-reader.mjs",
-    "test:journey-rewards": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-journey-rewards.mjs"
+    "test:journey-rewards": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-journey-rewards.mjs",
+    "test:auth-callback": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-auth-callback.mjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

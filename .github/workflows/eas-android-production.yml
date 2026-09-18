@@ -47,6 +47,9 @@ jobs:
       - name: Lint app
         run: npm run lint
 
+      - name: Test sign-in callback handling
+        run: npm run test:auth-callback
+
       - name: Set up Expo and EAS
         uses: expo/expo-github-action@v8
         with:

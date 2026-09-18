@@ -1,0 +1,56 @@
+name: Bible and Conflict Android Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/eas-conflict-production.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: conflict-android-production-build
+  cancel-in-progress: false
+
+# Use the existing publisher's Expo connection. Checkout and signing identity
+# belong to the standalone Conflict app, not the Journey app.
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Check out Bible and Conflict release source
+        uses: actions/checkout@v4
+        with:
+          repository: tryjesusmedia/bibleandconflict
+          ref: e5c909748f7b65b61a49aa003903d724481af260
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:auth-callback
+      - run: npm run test:rewards
+      - run: npm run test:progress
+      - run: npm run test:ui
+      - name: Connect to the existing Expo publisher
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Build standalone Android bundle
+        run: eas build --platform android --profile production --local --non-interactive --output bible-and-conflict.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bible-and-conflict-android-3
+          path: bible-and-conflict.aab
+          if-no-files-found: error
+          retention-days: 14

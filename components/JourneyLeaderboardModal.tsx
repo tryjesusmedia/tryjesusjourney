@@ -166,8 +166,8 @@ export function JourneyLeaderboardModal({
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={`${item.alias}, your leaderboard name`}
-                      delayLongPress={1400}
-                      onLongPress={() => openAliasEditor(item.alias)}
+                      onPress={() => openAliasEditor(item.alias)}
+                      style={styles.aliasPress}
                     >
                       <Text numberOfLines={2} style={styles.entryAlias}>{item.alias}</Text>
                     </Pressable>
@@ -247,6 +247,7 @@ const styles = StyleSheet.create({
   currentRank: { color: colors.charcoal },
   entryCopy: { flex: 1, minWidth: 0 },
   entryTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  aliasPress: { flexShrink: 1 },
   entryAlias: { flexShrink: 1, color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: '900' },
   youBadge: { color: colors.charcoal, backgroundColor: colors.gold, borderRadius: 8, overflow: 'hidden', paddingHorizontal: 6, paddingVertical: 3, fontSize: 8, fontWeight: '900', letterSpacing: .8 },
   entryMeta: { color: colors.muted, fontSize: 11, lineHeight: 16, marginTop: 3 },
