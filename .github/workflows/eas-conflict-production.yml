@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: tryjesusmedia/bibleandconflict
-          ref: 14f183fc3532f3127dec634a183e50ae6e4061f3
+          ref: e71e59ad2e1ee1af339e8a56093b238382725a9e
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -54,7 +54,7 @@ jobs:
         run: eas build --platform android --profile production --local --non-interactive --freeze-credentials --output bible-and-conflict.aab
       - uses: actions/upload-artifact@v4
         with:
-          name: bible-and-conflict-android-4-reading-complete
+          name: bible-and-conflict-android-5-reading-badges
           path: bible-and-conflict.aab
           if-no-files-found: error
           retention-days: 14
