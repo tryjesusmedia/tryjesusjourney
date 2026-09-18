@@ -1,4 +1,4 @@
-name: Bible and Conflict Android Build
+name: Bible and Conflict Android Release
 
 on:
   workflow_dispatch:
@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: tryjesusmedia/bibleandconflict
-          ref: e5c909748f7b65b61a49aa003903d724481af260
+          ref: 1b19896a79512b4c44e7a77bdc6645725f88e152
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -37,20 +37,21 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - run: npm test
       - run: npm run test:auth-callback
-      - run: npm run test:rewards
-      - run: npm run test:progress
-      - run: npm run test:ui
+      - run: npm run test:account-isolation
       - name: Connect to the existing Expo publisher
         uses: expo/expo-github-action@v8
         with:
-          eas-version: latest
+          eas-version: 24.7.0
           token: ${{ secrets.EXPO_TOKEN }}
       - name: Build standalone Android bundle
-        run: eas build --platform android --profile production --local --non-interactive --output bible-and-conflict.aab
+        run: eas build --platform android --profile production --local --non-interactive --freeze-credentials --output bible-and-conflict.aab
       - uses: actions/upload-artifact@v4
         with:
-          name: bible-and-conflict-android-3
+          name: bible-and-conflict-android-4
           path: bible-and-conflict.aab
           if-no-files-found: error
           retention-days: 14
+      - name: Submit Bible and Conflict to Google Play production
+        run: eas submit --platform android --profile production --path bible-and-conflict.aab --non-interactive --wait
