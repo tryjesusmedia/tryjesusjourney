@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { EarnedReadingBadges, ReadingBadgeButton, ReadingBadgeProvider } from '@/components/ReadingBadges';
 import { JourneyLeaderboardModal } from '@/components/JourneyLeaderboardModal';
 import { JourneyProgressRewards } from '@/components/JourneyStatusCard';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
@@ -253,6 +254,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
             <View style={styles.progressHeading}><View><Eyebrow>YOUR PROGRESS</Eyebrow><Text style={styles.progressNumber}>{percent}% complete</Text></View><Text style={styles.progressCount}>{progress.completed.length}/{chronologicalPlanMeta.chapterCount}</Text></View>
             <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${percent}%` }]} /></View>
             <GoldButton title="Continue Reading" onPress={continueReading} />
+            <EarnedReadingBadges completed={completedSet} />
             <JourneyProgressRewards summary={journeyRewards} onOpenLeaderboard={() => setLeaderboardVisible(true)} />
           </Card>
         </>
@@ -265,6 +267,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
   }
 
   return (
+    <ReadingBadgeProvider completed={completedSet} ready={ready && loadedIdentity === authIdentity} accountIdentity={authIdentity}>
     <KeyboardAvoidingView style={[styles.page, { paddingTop: Math.max(insets.top, 12) }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {fixedHeader}
       <FlatList<ChronologicalListItem>
@@ -296,10 +299,13 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
           const readingCompleted = reading.bibleTasks.filter((task) => completedSet.has(task.progressIndex)).length;
           return <Card style={[item.searchResult ? styles.readingResultCard : undefined, isExpanded ? styles.expandedCard : undefined]}>
             {item.searchResult ? <Text style={styles.readingResultBadge}>BIBLE READING</Text> : null}
-            <Pressable onPress={() => setExpandedReadingId(isExpanded ? null : reading.id)}>
+            <View style={styles.readingTitleRow}>
+            <Pressable style={styles.readingTitleCopy} onPress={() => setExpandedReadingId(isExpanded ? null : reading.id)}>
               <View style={styles.readingTopline}><Text style={styles.readingNumber}>READING {reading.number}</Text><Text style={styles.readingCount}>{readingCompleted}/{reading.bibleTasks.length} chapters</Text></View>
               <Text style={styles.readingTitle}>{reading.title}</Text><Text style={styles.sectionLabel}>{reading.section}</Text><Text style={styles.expandLabel}>{isExpanded ? 'Hide reading ↑' : 'Open reading ↓'}</Text>
             </Pressable>
+            {readingCompleted === reading.bibleTasks.length ? <ReadingBadgeButton reading={reading} /> : null}
+            </View>
             {isExpanded ? <View style={styles.expandedContent}>{reading.bibleTasks.map((task) => {
               const isComplete = completedSet.has(task.progressIndex);
               return <View key={task.progressIndex} style={styles.chapterBlock}><View style={styles.chapterRow}>
@@ -321,6 +327,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
       <JourneyLeaderboardModal
         key={sessionUserId ?? 'guest'}
         visible={leaderboardVisible}
+        publicName={journeyProfile.alias}
         signedIn={Boolean(sessionUserId)}
         aliasSaving={journeyProfile.saving}
         signInBusy={syncBusy || authLoading}
@@ -329,6 +336,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
         onSaveAlias={journeyProfile.saveAlias}
       />
     </KeyboardAvoidingView>
+    </ReadingBadgeProvider>
   );
 }
 
@@ -345,6 +353,7 @@ const styles = StyleSheet.create({
   body: { color: colors.ivory, fontSize: 14, lineHeight: 21, marginBottom: 14 }, searchShell: { backgroundColor: colors.gold, borderRadius: 18, padding: 3, shadowColor: '#000', shadowOpacity: .24, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 5 }, searchLabel: { color: colors.charcoal, fontSize: 10, lineHeight: 16, fontWeight: '900', letterSpacing: 1.5, paddingHorizontal: 11, paddingTop: 3, paddingBottom: 1 }, searchRow: { minHeight: 50, flexDirection: 'row', alignItems: 'center', borderRadius: 15, backgroundColor: '#FFF7E6', paddingHorizontal: 12 }, searchIcon: { color: '#3A2C34', fontSize: 25, fontWeight: '900', marginRight: 7, marginTop: -2 }, search: { flex: 1, minHeight: 50, paddingVertical: 10, color: '#241C22', fontSize: 16, fontWeight: '700' }, clearSearch: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8D9BF' }, clearSearchText: { color: '#3A2C34', fontSize: 24, lineHeight: 27, fontWeight: '800' },
   resultSummary: { backgroundColor: colors.panel2, borderWidth: 1, borderColor: colors.gold, borderRadius: 18, padding: 15 }, resultSummaryTitle: { color: colors.text, fontSize: 18, fontWeight: '900' }, resultHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4, paddingHorizontal: 3 }, resultHeadingText: { color: colors.text, fontSize: 18, fontWeight: '900' }, resultHeadingCount: { minWidth: 28, height: 28, borderRadius: 14, overflow: 'hidden', textAlign: 'center', textAlignVertical: 'center', backgroundColor: colors.gold, color: colors.charcoal, fontSize: 12, fontWeight: '900' }, separator: { height: 12 }, emptyTitle: { color: colors.text, fontSize: 18, fontWeight: '900', marginBottom: 5 },
   sectionCard: { backgroundColor: colors.plum, borderColor: 'rgba(238,189,74,.38)' }, sectionCardOpen: { backgroundColor: colors.plum2, borderColor: colors.gold }, sectionTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, sectionNumber: { color: colors.gold, fontSize: 10, fontWeight: '900', letterSpacing: 1.5 }, sectionChevron: { color: colors.gold, fontSize: 26, lineHeight: 27, fontWeight: '500' }, sectionTitle: { color: colors.text, fontSize: 19, lineHeight: 25, fontWeight: '900', marginTop: 7 }, sectionMeta: { color: colors.ivory, fontSize: 12, lineHeight: 18, marginTop: 6 }, sectionAction: { color: colors.gold, fontSize: 12, fontWeight: '900', marginTop: 12 },
+  readingTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 }, readingTitleCopy: { flex: 1, minWidth: 0 },
   readingResultCard: { borderColor: colors.gold }, readingResultBadge: { alignSelf: 'flex-start', color: colors.charcoal, backgroundColor: colors.gold, borderRadius: 10, overflow: 'hidden', paddingHorizontal: 9, paddingVertical: 5, fontSize: 9, fontWeight: '900', letterSpacing: 1.2, marginBottom: 11 },
   expandedCard: { borderColor: colors.gold, backgroundColor: colors.panel2 }, readingTopline: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 }, readingNumber: { color: colors.gold, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 }, readingCount: { color: colors.muted, fontSize: 11, fontWeight: '800' }, readingTitle: { color: colors.text, fontSize: 19, fontWeight: '900', lineHeight: 25, marginTop: 8 }, sectionLabel: { color: colors.muted, fontSize: 12, marginTop: 5 }, expandLabel: { color: colors.gold, fontSize: 12, fontWeight: '900', marginTop: 12 }, expandedContent: { marginTop: 18, gap: 10 }, chapterBlock: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 }, chapterRow: { flexDirection: 'row', alignItems: 'center', gap: 11 }, checkbox: { width: 30, height: 30, borderRadius: 9, borderWidth: 1, borderColor: colors.gold, alignItems: 'center', justifyContent: 'center' }, checkboxComplete: { backgroundColor: colors.green, borderColor: colors.green }, checkmark: { color: colors.charcoal, fontWeight: '900', fontSize: 18 }, chapterActions: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'stretch', borderRadius: 10, backgroundColor: 'rgba(255,255,255,.025)' }, chapterButton: { flex: 1, minWidth: 0, justifyContent: 'center', paddingHorizontal: 8 }, chapterLabel: { color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: '900' }, chapterComplete: { color: colors.muted, textDecorationLine: 'line-through' }, chapterDivider: { width: 1, marginVertical: 8, backgroundColor: colors.border }, gatewayButton: { flex: 1.25, minWidth: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7, paddingVertical: 7 }, gatewayLabel: { color: colors.gold, fontSize: 11, lineHeight: 15, fontWeight: '900', textAlign: 'center' },
 });

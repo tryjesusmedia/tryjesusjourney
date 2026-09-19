@@ -21,6 +21,7 @@ import type { JourneyLeaderboardEntry } from '@/lib/journeyRewardsCore';
 
 type JourneyLeaderboardModalProps = {
   visible: boolean;
+  publicName: string | null;
   signedIn: boolean;
   aliasSaving: boolean;
   signInBusy: boolean;
@@ -31,6 +32,7 @@ type JourneyLeaderboardModalProps = {
 
 export function JourneyLeaderboardModal({
   visible,
+  publicName,
   signedIn,
   aliasSaving,
   signInBusy,
@@ -125,6 +127,10 @@ export function JourneyLeaderboardModal({
           <Text style={styles.closeButtonText}>×</Text>
         </Pressable>
       </View>
+      {signedIn ? <Pressable accessibilityRole="button" accessibilityLabel="Change your public name" onPress={() => openAliasEditor(publicName || entries.find(entry => entry.isCurrentUser)?.alias || '')}>
+        <Text style={styles.welcome}>Welcome, {publicName || entries.find(entry => entry.isCurrentUser)?.alias || 'Friend'}!</Text>
+        <Text style={styles.welcomeChange}>Change name</Text>
+      </Pressable> : <Text style={styles.welcome}>Welcome, Friend!</Text>}
       <Text style={styles.supportiveCopy}>Journey Points celebrate reading progress. Every chapter read is worth celebrating.</Text>
 
       {!signedIn ? (
@@ -162,24 +168,11 @@ export function JourneyLeaderboardModal({
               <View style={[styles.rankBadge, item.isCurrentUser && styles.currentRankBadge]}><Text style={[styles.rank, item.isCurrentUser && styles.currentRank]}>#{item.rank}</Text></View>
               <View style={styles.entryCopy}>
                 <View style={styles.entryTitleRow}>
-                  {item.isCurrentUser ? (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`${item.alias}, your leaderboard name`}
-                      onPress={() => openAliasEditor(item.alias)}
-                      style={styles.aliasPress}
-                    >
-                      <Text numberOfLines={2} style={styles.entryAlias}>{item.alias}</Text>
-                    </Pressable>
-                  ) : <Text numberOfLines={2} style={styles.entryAlias}>{item.alias}</Text>}
+                  <Text numberOfLines={2} style={styles.entryAlias}>{item.alias}</Text>
                   {item.isCurrentUser ? <Text style={styles.youBadge}>YOU</Text> : null}
                 </View>
                 <Text style={styles.entryMeta}>{item.completedChapters} chapter{item.completedChapters === 1 ? '' : 's'} completed</Text>
-                {item.isCurrentUser ? (
-                  <Pressable accessibilityRole="button" accessibilityLabel="Change your leaderboard name" onPress={() => openAliasEditor(item.alias)} style={styles.changeNameButton}>
-                    <Text style={styles.changeNameText}>Change Name</Text>
-                  </Pressable>
-                ) : null}
+
               </View>
               <View style={styles.entryPoints}>
                 <Text style={styles.entryPointsNumber}>{item.journeyPoints.toLocaleString()}</Text>
@@ -223,6 +216,8 @@ export function JourneyLeaderboardModal({
 }
 
 const styles = StyleSheet.create({
+  welcome: { color: colors.ivory, fontSize: 40, lineHeight: 50, fontWeight: '900' },
+  welcomeChange: { color: colors.gold, fontSize: 18, lineHeight: 26, fontWeight: '800', paddingVertical: 12 },
   page: { flex: 1, backgroundColor: colors.charcoal },
   content: { paddingHorizontal: 20, paddingBottom: 20 },
   headerContent: { paddingBottom: 14 },
