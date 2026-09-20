@@ -15,7 +15,6 @@ import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EarnedReadingBadges, ReadingBadgeButton, ReadingBadgeProvider } from '@/components/ReadingBadges';
 import { JourneyLeaderboardModal } from '@/components/JourneyLeaderboardModal';
-import { JourneyProgressRewards } from '@/components/JourneyStatusCard';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
 import { colors } from '@/constants/theme';
 import {
@@ -62,11 +61,9 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
   const [syncBusy, setSyncBusy] = useState(false);
   const [taskBusy, setTaskBusy] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeView, setActiveView] = useState<'journey' | 'progress'>('journey');
-  const [focusedReading, setFocusedReading] = useState<ChronologicalReading | null>(null);
+  const [activeView, setActiveView] = useState<'journey' | 'progress' | 'leaderboard'>('journey');
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(chronologicalBiblePlan[0]?.id ?? null);
   const [expandedReadingId, setExpandedReadingId] = useState<string | null>(null);
-  const [leaderboardVisible, setLeaderboardVisible] = useState(false);
   const journeyProfile = useJourneyProfile(sessionUserId);
 
   useFocusEffect(useCallback(() => {
@@ -110,12 +107,11 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
   const percent = Math.round((progress.completed.length / chronologicalPlanMeta.chapterCount) * 100);
   const listItems = useMemo<ChronologicalListItem[]>(() => {
     if (activeView !== 'journey') return [];
-    if (focusedReading) return [{ kind: 'reading', reading: focusedReading }];
     return chronologicalBiblePlan.flatMap<ChronologicalListItem>((section) => [
       { kind: 'section', section },
       ...(expandedSectionId === section.id ? section.readings.map((reading) => ({ kind: 'reading' as const, reading })) : []),
     ]);
-  }, [activeView, expandedSectionId, focusedReading]);
+  }, [activeView, expandedSectionId]);
 
   async function connectGoogle() {
     if (syncBusy) return;
@@ -169,18 +165,6 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
     }
   }
 
-  function continueReading() {
-    const start = Math.max(0, Math.min(progress.lastIndex, chronologicalReadings.length - 1));
-    const next = chronologicalReadings.slice(start).find((reading) => reading.bibleTasks.some((task) => !completedSet.has(task.progressIndex)))
-      ?? chronologicalReadings.find((reading) => reading.bibleTasks.some((task) => !completedSet.has(task.progressIndex)))
-      ?? chronologicalReadings[0];
-    const section = chronologicalBiblePlan.find((candidate) => candidate.title === next.section);
-    setActiveView('journey');
-    setFocusedReading(next);
-    setExpandedSectionId(section?.id ?? null);
-    setExpandedReadingId(next.id);
-  }
-
   function openChapter(chapterLabel: string) {
     router.push({ pathname: '/bible-reader' as never, params: { reference: chapterLabel } });
   }
@@ -218,13 +202,9 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
       <View style={styles.fixedTitleRow}><View style={styles.fixedTitleCopy}><Eyebrow>READ IN HISTORICAL SEQUENCE</Eyebrow><Text style={styles.title}>Chronological Bible</Text></View></View>
       <View style={styles.tabs} accessibilityRole="tablist">
         {(['journey', 'progress', 'leaderboard'] as const).map((tab) => {
-          const selected = tab === 'leaderboard' ? leaderboardVisible : !leaderboardVisible && activeView === tab;
+          const selected = activeView === tab;
           return <Pressable key={tab} accessibilityRole="tab" accessibilityState={{ selected }} style={[styles.tab, selected && styles.tabSelected]} onPress={() => {
-            if (tab === 'leaderboard') setLeaderboardVisible(true);
-            else {
-              setActiveView(tab);
-              if (tab === 'journey') setFocusedReading(null);
-            }
+            setActiveView(tab);
           }}><Text style={[styles.tabText, selected && styles.tabTextSelected]}>{tab === 'journey' ? 'Journey' : tab === 'progress' ? 'Progress' : 'Leaderboard'}</Text></Pressable>;
         })}
       </View>
@@ -233,16 +213,26 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
 
   const listHeader = (
     <View style={styles.headerStack}>
-      <Card style={styles.progressCard}>
-        <View style={styles.progressHeading}><View><Eyebrow>YOUR PROGRESS</Eyebrow><Text style={styles.progressNumber}>{percent}% complete</Text></View><Text style={styles.progressCount}>{progress.completed.length}/{chronologicalPlanMeta.chapterCount}</Text></View>
-        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${percent}%` }]} /></View>
-        <GoldButton title="Continue Reading" onPress={continueReading} />
-        {activeView === 'journey' && focusedReading ? <OutlineButton title="View All Readings" onPress={() => setFocusedReading(null)} /> : null}
-      </Card>
-      {activeView === 'progress' ? <Card>
+      {activeView === 'journey' ? <View>
+        <Eyebrow>THE COMPLETE SEQUENCE</Eyebrow>
+        <Text style={styles.viewTitle}>The chronological journey</Text>
+        <Text style={styles.viewDescription}>Across {chronologicalBiblePlan.length} major historical sections, the complete journey is organized into {chronologicalReadings.length} manageable, named reading tasks, including all 42 chapters of Job between Genesis 11 and Genesis 12.</Text>
+      </View> : null}
+      {activeView === 'progress' ? <>
+        <View><Eyebrow>YOUR READING PROGRESS</Eyebrow><Text style={styles.viewTitle}>Continue the story</Text><Text style={styles.viewDescription}>{session ? 'Your chapter progress and Journey Points are synced across your signed-in devices.' : 'Sign in with Google whenever you want your progress and Journey Points synced across devices.'}</Text></View>
+        {!session ? <OutlineButton title="Sign in to save progress" onPress={connectGoogle} /> : null}
         <EarnedReadingBadges completed={completedSet} />
-        <JourneyProgressRewards summary={journeyRewards} onOpenLeaderboard={() => setLeaderboardVisible(true)} />
-      </Card> : null}
+        <View style={styles.statGrid}>{[
+          [String(chronologicalReadings.filter(reading => reading.bibleTasks.every(task => completedSet.has(task.progressIndex))).length), 'Tasks complete'],
+          [String(journeyRewards.completedChapters), 'Chapters complete'],
+          [`${percent}%`, 'Journey complete'],
+          [journeyRewards.journeyPoints.toLocaleString(), 'Journey Points'],
+        ].map(([value, label]) => <View key={label} style={styles.statCard}><Text style={styles.progressNumber}>{value}</Text><Text style={styles.viewDescription}>{label}</Text></View>)}</View>
+        <Card><Text style={styles.sectionTitle}>Progress by section</Text>{chronologicalBiblePlan.map(section => {
+          const completed = section.readings.filter(reading => reading.bibleTasks.every(task => completedSet.has(task.progressIndex))).length;
+          return <View key={section.id} style={styles.sectionProgress}><View style={styles.progressRow}><Text style={styles.progressRowTitle}>{section.title}</Text><Text style={styles.progressCount}>{completed} / {section.readings.length}</Text></View><View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.round(completed / section.readings.length * 100)}%` }]} /></View></View>;
+        })}</Card>
+      </> : null}
     </View>
   );
 
@@ -254,8 +244,8 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
     <ReadingBadgeProvider completed={completedSet} ready={ready && loadedIdentity === authIdentity} accountIdentity={authIdentity}>
     <KeyboardAvoidingView style={[styles.page, { paddingTop: Math.max(insets.top, 12) }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {fixedHeader}
-      <FlatList<ChronologicalListItem>
-        key={`${activeView}-${focusedReading?.id ?? "all"}`}
+      {activeView !== 'leaderboard' ? <FlatList<ChronologicalListItem>
+        key={activeView}
         style={styles.list}
         contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 24) }]}
         data={listItems}
@@ -273,7 +263,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
             const completeCount = section.readings.filter((reading) => reading.bibleTasks.every((task) => completedSet.has(task.progressIndex))).length;
             return <Card style={[styles.sectionCard, expanded ? styles.sectionCardOpen : undefined]}><Pressable onPress={() => { setExpandedSectionId(expanded ? null : section.id); setExpandedReadingId(null); }} accessibilityRole="button" accessibilityState={{ expanded }}>
               <View style={styles.sectionTopline}><Text style={styles.sectionNumber}>SECTION {String(section.number).padStart(2, '0')}</Text><Text style={styles.sectionChevron}>{expanded ? '−' : '+'}</Text></View>
-              <Text style={styles.sectionTitle}>{section.title}</Text><Text style={styles.sectionMeta}>{section.readings.length} readings · {completeCount} complete</Text><Text style={styles.sectionAction}>{expanded ? 'Hide readings' : 'Show readings'}</Text>
+              <Text style={styles.sectionTitle}>{section.title}</Text><Text style={styles.sectionMeta}>{section.readings.length} readings · {completeCount} complete</Text><View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.round(completeCount / section.readings.length * 100)}%` }]} /></View><Text style={styles.sectionAction}>{expanded ? 'Hide readings' : 'Show readings'}</Text>
             </Pressable></Card>;
           }
 
@@ -305,18 +295,19 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
             })}</View> : null}
           </Card>;
         }}
-      />
-      <JourneyLeaderboardModal
+      /> : <JourneyLeaderboardModal
         key={sessionUserId ?? 'guest'}
-        visible={leaderboardVisible}
+        visible
+        inline
+        summary={journeyRewards}
         publicName={journeyProfile.alias}
         signedIn={Boolean(sessionUserId)}
         aliasSaving={journeyProfile.saving}
         signInBusy={syncBusy || authLoading}
-        onRequestClose={() => setLeaderboardVisible(false)}
+        onRequestClose={() => setActiveView('journey')}
         onSignIn={connectGoogle}
         onSaveAlias={journeyProfile.saveAlias}
-      />
+      />}
     </KeyboardAvoidingView>
     </ReadingBadgeProvider>
   );
@@ -327,6 +318,13 @@ export default function ChronologicalBibleScreen() {
 }
 
 const styles = StyleSheet.create({
+  viewTitle: { color: colors.text, fontSize: 28, lineHeight: 35, fontWeight: '900', marginBottom: 10 },
+  viewDescription: { color: colors.ivory, fontSize: 16, lineHeight: 24 },
+  statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  statCard: { flexGrow: 1, flexBasis: '45%', padding: 18, borderRadius: 16, backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.border },
+  sectionProgress: { marginTop: 18 },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  progressRowTitle: { flex: 1, color: colors.ivory, fontSize: 16, lineHeight: 23 },
   page: { flex: 1, backgroundColor: colors.charcoal }, list: { flex: 1 }, loadingPage: { flex: 1, backgroundColor: colors.charcoal, alignItems: 'center', justifyContent: 'center', gap: 12 }, loadingText: { color: colors.muted, fontSize: 14 },
   content: { paddingHorizontal: 18, paddingTop: 12 }, fixedHeader: { backgroundColor: colors.charcoal, paddingHorizontal: 18, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border }, headerStack: { gap: 14, marginBottom: 16 },
   topbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, topbarActions: { flexDirection: 'row', alignItems: 'center', gap: 12 }, backButton: { paddingVertical: 8, paddingRight: 14 }, backText: { color: colors.gold, fontSize: 16, fontWeight: '800' }, translation: { color: colors.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },

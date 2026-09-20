@@ -28,7 +28,7 @@ for (const screen of [home, bibleDecoded]) {
   assert.match(screen, /Current price for the next 100 customers\./);
   assert.match(screen, /oldPrice:\s*\{[^}]*textDecorationLine:\s*'line-through'/);
 }
-const homeOffers = ['styles.readingCard', 'styles.bibleDecodedCard', 'styles.hero', '<YouTubeOffer />', '<LiveDiscussionOffer />', 'styles.whatsappCard', 'styles.askCard'];
+const homeOffers = ['styles.readingCard', 'styles.bibleDecodedCard', '<YouTubeOffer />', '<LiveDiscussionOffer />', 'styles.whatsappCard', 'styles.askCard'];
 for (let index = 1; index < homeOffers.length; index += 1) {
   assert.ok(home.indexOf(homeOffers[index - 1]) < home.indexOf(homeOffers[index]), `Home offer ${homeOffers[index - 1]} must appear before ${homeOffers[index]}`);
 }

@@ -17,10 +17,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
 import { colors } from '@/constants/theme';
 import { getJourneyLeaderboard } from '@/lib/journeyRewards';
-import type { JourneyLeaderboardEntry } from '@/lib/journeyRewardsCore';
+import { JOURNEY_MILESTONES, JOURNEY_TOTAL_CHAPTERS, type JourneyRewardSummary, type JourneyLeaderboardEntry } from '@/lib/journeyRewardsCore';
 
 type JourneyLeaderboardModalProps = {
   visible: boolean;
+  inline?: boolean;
+  summary?: JourneyRewardSummary;
   publicName: string | null;
   signedIn: boolean;
   aliasSaving: boolean;
@@ -32,6 +34,8 @@ type JourneyLeaderboardModalProps = {
 
 export function JourneyLeaderboardModal({
   visible,
+  inline = false,
+  summary,
   publicName,
   signedIn,
   aliasSaving,
@@ -48,6 +52,7 @@ export function JourneyLeaderboardModal({
   const [loadError, setLoadError] = useState(false);
   const [aliasEditorOpen, setAliasEditorOpen] = useState(false);
   const [aliasDraft, setAliasDraft] = useState('');
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
 
   const loadLeaderboard = useCallback(async () => {
     const generation = ++loadGenerationRef.current;
@@ -118,7 +123,7 @@ export function JourneyLeaderboardModal({
 
   const header = (
     <View style={styles.headerContent}>
-      <View style={styles.titleRow}>
+      {!inline ? <View style={styles.titleRow}>
         <View style={styles.titleCopy}>
           <Eyebrow>CHRON BIBLE COMMUNITY</Eyebrow>
           <Text style={styles.title}>Journey Leaderboard</Text>
@@ -126,14 +131,24 @@ export function JourneyLeaderboardModal({
         <Pressable accessibilityRole="button" accessibilityLabel="Close leaderboard" onPress={onRequestClose} style={styles.closeButton}>
           <Text style={styles.closeButtonText}>×</Text>
         </Pressable>
-      </View>
+      </View> : null}
       {signedIn ? <Pressable accessibilityRole="button" accessibilityLabel="Change your public name" onPress={() => openAliasEditor(publicName || entries.find(entry => entry.isCurrentUser)?.alias || '')}>
         <Text style={styles.welcome}>Welcome, {publicName || entries.find(entry => entry.isCurrentUser)?.alias || 'Friend'}!</Text>
         <Text style={styles.welcomeChange}>Change name</Text>
       </Pressable> : <Text style={styles.welcome}>Welcome, Friend!</Text>}
-      <Text style={styles.supportiveCopy}>Journey Points celebrate reading progress. Every chapter read is worth celebrating.</Text>
+      {summary ? <>
+        <View style={styles.pointsLabel}><Eyebrow>YOUR JOURNEY POINTS</Eyebrow><Text style={styles.supportiveCopy}>(Each chapter earns 10 points)</Text></View>
+        <Text style={styles.pointsTotal}>{summary.journeyPoints.toLocaleString()}</Text>
+        <Text style={styles.supportiveCopy}>{summary.completedChapters.toLocaleString()} of {JOURNEY_TOTAL_CHAPTERS.toLocaleString()} chapters complete</Text>
+        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.round(summary.nextMilestoneProgress * 100)}%` }]} /></View>
+        <Text style={styles.supportiveCopy}>{summary.nextMilestone === null ? 'You completed the full journey.' : summary.nextMilestone === 1 ? 'Complete your first chapter to reach your first milestone.' : `${summary.chaptersUntilNextMilestone} chapters to the ${summary.nextMilestone.toLocaleString()}-chapter milestone.`}</Text>
+        <View style={styles.milestonePanel}><Eyebrow>MILESTONES</Eyebrow><Text style={styles.title}>Markers along the way</Text>
+          <View style={styles.milestones}>{JOURNEY_MILESTONES.map(milestone => <View key={milestone} style={[styles.milestone, summary.completedChapters >= milestone && styles.earnedMilestone]}><Text style={styles.milestoneText}>{summary.completedChapters >= milestone ? '✓' : '◇'} {milestone === JOURNEY_TOTAL_CHAPTERS ? 'Journey complete' : `${milestone.toLocaleString()} chapters`}</Text></View>)}</View>
+        </View>
+      </> : <Text style={styles.supportiveCopy}>Journey Points celebrate reading progress. Every chapter read is worth celebrating.</Text>}
+      {inline ? <Pressable accessibilityRole="button" accessibilityState={{ expanded: leaderboardOpen }} onPress={() => setLeaderboardOpen(open => !open)} style={styles.leaderboardToggle}><View><Eyebrow>ALL READERS</Eyebrow><Text style={styles.title}>Journey leaderboard</Text></View><Text style={styles.closeButtonText}>{leaderboardOpen ? '−' : '+'}</Text></Pressable> : null}
 
-      {!signedIn ? (
+      {!signedIn && (!inline || leaderboardOpen) ? (
         <View style={styles.joinCard}>
           <Text style={styles.joinTitle}>Join with a public leaderboard name</Text>
           <Text style={styles.joinBody}>Sign in with Google to view the leaderboard. You can customize your public name; your email, photo, and account ID are never shown here.</Text>
@@ -141,18 +156,17 @@ export function JourneyLeaderboardModal({
         </View>
       ) : null}
 
-      {signedIn ? <Text style={styles.listHeading}>ALL READERS</Text> : null}
+      {signedIn && !inline ? <Text style={styles.listHeading}>ALL READERS</Text> : null}
     </View>
   );
 
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onRequestClose}>
-      <View style={[styles.page, { paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 12) }]} accessibilityViewIsModal>
+  const content = (
+      <View style={[styles.page, { paddingTop: inline ? 12 : Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 12) }]} accessibilityViewIsModal={!inline}>
         <FlatList
-          data={signedIn ? entries : []}
+          data={signedIn && (!inline || leaderboardOpen) ? entries : []}
           keyExtractor={(item, index) => `${item.rank}-${item.alias}-${index}`}
           ListHeaderComponent={header}
-          ListEmptyComponent={signedIn ? (
+          ListEmptyComponent={signedIn && (!inline || leaderboardOpen) ? (
             loading || !hasLoaded ? (
               <View style={styles.stateCard}><ActivityIndicator color={colors.gold} size="large" /><Text style={styles.stateText}>Loading the leaderboard…</Text></View>
             ) : loadError ? (
@@ -183,7 +197,7 @@ export function JourneyLeaderboardModal({
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           contentContainerStyle={styles.content}
           refreshControl={signedIn ? <RefreshControl refreshing={loading} onRefresh={() => { void loadLeaderboard(); }} tintColor={colors.gold} colors={[colors.gold]} /> : undefined}
-          ListFooterComponent={<Pressable accessibilityRole="button" onPress={onRequestClose} style={styles.doneButton}><Text style={styles.doneButtonText}>Close Leaderboard</Text></Pressable>}
+          ListFooterComponent={inline ? null : <Pressable accessibilityRole="button" onPress={onRequestClose} style={styles.doneButton}><Text style={styles.doneButtonText}>Close Leaderboard</Text></Pressable>}
         />
         <Modal visible={visible && aliasEditorOpen} transparent animationType="fade" onRequestClose={() => setAliasEditorOpen(false)}>
           <View style={styles.editorScrim}>
@@ -211,11 +225,21 @@ export function JourneyLeaderboardModal({
           </View>
         </Modal>
       </View>
-    </Modal>
   );
+  return inline ? content : <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onRequestClose}>{content}</Modal>;
 }
 
 const styles = StyleSheet.create({
+  pointsLabel: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 8, marginTop: 12 },
+  pointsTotal: { color: colors.gold, fontSize: 56, fontWeight: '900', marginTop: 8 },
+  progressTrack: { height: 8, borderRadius: 8, overflow: 'hidden', backgroundColor: colors.panel2, marginTop: 16 },
+  progressFill: { height: '100%', backgroundColor: colors.gold },
+  milestonePanel: { marginTop: 24, padding: 18, borderWidth: 1, borderColor: colors.border, borderRadius: 18, backgroundColor: colors.panel },
+  milestones: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
+  milestone: { padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+  earnedMilestone: { borderColor: colors.gold, backgroundColor: colors.plum },
+  milestoneText: { color: colors.ivory, fontSize: 16, fontWeight: '700' },
+  leaderboardToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 24, padding: 18, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.panel },
   welcome: { color: colors.ivory, fontSize: 40, lineHeight: 50, fontWeight: '900' },
   welcomeChange: { color: colors.gold, fontSize: 18, lineHeight: 26, fontWeight: '800', paddingVertical: 12 },
   page: { flex: 1, backgroundColor: colors.charcoal },

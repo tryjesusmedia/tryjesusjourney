@@ -74,7 +74,8 @@ const migration = await readFile(new URL('../supabase/migrations/20260911150000_
 const lockdownMigration = await readFile(new URL('../supabase/migrations/20260911153000_lock_down_journey_reward_rpcs.sql', import.meta.url), 'utf8');
 const customAliasMigration = await readFile(new URL('../supabase/migrations/20260912100000_custom_journey_alias.sql', import.meta.url), 'utf8');
 
-assert.match(screen, /<Card style=\{styles\.progressCard\}>[^]*<GoldButton title="Continue Reading"[^]*<JourneyProgressRewards/u, 'Journey rewards belong inside Your Progress below Continue Reading');
+assert.doesNotMatch(screen, /Continue Reading|continueReading|focusedReading/u, 'Continue-reading panels are removed');
+assert.match(screen, /summary=\{journeyRewards\}/u, 'Leaderboard displays current journey points');
 assert.match(screen, /summarizeJourneyRewards\(progress\.completed\)/u, 'Offline points must derive from current on-phone progress');
 assert.match(screen, /<JourneyLeaderboardModal/u);
 assert.doesNotMatch(screen, /scrollTo(?:Offset|Index)/u, 'Opening the modal must not move the Chron reading list');
@@ -92,7 +93,7 @@ assert.match(profileHook, /if \(!userId\)[^]*setAlias\(null\)/u, 'Signed-out rea
 assert.match(profileHook, /setError\(true\)/u, 'Profile failures must stay contained in the optional reward layer');
 
 assert.match(leaderboardModal, /if \(!visible \|\| !signedIn\)[^]*return;/u, 'A guest must never trigger the authenticated leaderboard RPC');
-assert.match(leaderboardModal, /data=\{signedIn \? entries : \[\]\}/u);
+assert.match(leaderboardModal, /data=\{signedIn && \(!inline \|\| leaderboardOpen\) \? entries : \[\]\}/u);
 assert.match(leaderboardModal, /Sign In with Google to Join/u);
 assert.match(leaderboardModal, /onPress=\{\(\) => openAliasEditor\(publicName/u);
 assert.match(leaderboardModal, />Change name</u);

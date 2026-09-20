@@ -21,6 +21,7 @@ const BadgeArt = React.memo(function BadgeArt({ badge, size }: { badge: ReadingB
 
 export function ReadingBadgeButton({ reading, gallery = false }: { reading: ChronologicalReading; gallery?: boolean }) {
   const open = useContext(BadgeViewerContext);
+  const [cellWidth, setCellWidth] = useState(READING_BADGE_SIZE);
   const badge = getBadge(reading.id);
   if (!badge) return null;
   return (
@@ -29,9 +30,10 @@ export function ReadingBadgeButton({ reading, gallery = false }: { reading: Chro
       accessibilityLabel={`Earned badge: ${badge.label}. Reading ${reading.number}: ${badge.title}.`}
       accessibilityHint="Open full-screen badge"
       onPress={() => open(badge)}
+      onLayout={gallery ? (event) => setCellWidth(event.nativeEvent.layout.width) : undefined}
       style={({ pressed }) => [styles.badgeButton, gallery ? styles.galleryBadge : styles.titleBadge, pressed && styles.pressed]}
     >
-      <BadgeArt badge={badge} size={READING_BADGE_SIZE} />
+      <BadgeArt badge={badge} size={gallery ? Math.min(READING_BADGE_SIZE, Math.max(1, cellWidth - 8)) : READING_BADGE_SIZE} />
       <Text style={styles.badgeNumber}>Reading {reading.number}</Text>
     </Pressable>
   );
@@ -125,9 +127,9 @@ const styles = StyleSheet.create({
   collection: { gap: 16 },
   collectionTitle: { color: colors.gold, fontSize: 18, lineHeight: 25, fontWeight: '800' },
   empty: { color: colors.muted, fontSize: 17, lineHeight: 26 },
-  gallery: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 22, alignItems: 'flex-start' },
+  gallery: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 22, alignItems: 'flex-start' },
   badgeButton: { alignItems: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 3, borderRadius: 12 },
-  galleryBadge: { width: '30%', minWidth: 80 },
+  galleryBadge: { width: '25%', minWidth: 0, paddingHorizontal: 4 },
   titleBadge: { width: 88, flexShrink: 0 },
   badgeNumber: { color: colors.gold, fontSize: 12, lineHeight: 17, fontWeight: '800', textAlign: 'center' },
   pressed: { opacity: 0.7 },

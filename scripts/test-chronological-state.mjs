@@ -193,7 +193,7 @@ const homeScreen = await readFile(new URL('../app/(tabs)/home.tsx', import.meta.
 assert.match(chronologicalScreen, /prepareChronologicalDetach\(sessionUserId\)[^]*await signOut\(\)/);
 assert.match(chronologicalScreen, /accessibilityLabel="Chron Bible menu"/);
 assert.match(chronologicalScreen, /session[^]*Sign Out of Google Sync[^]*Sign In to Sync/);
-assert.match(chronologicalScreen, /<Eyebrow>YOUR PROGRESS<\/Eyebrow>/);
+assert.match(chronologicalScreen, /<Eyebrow>YOUR READING PROGRESS<\/Eyebrow>/);
 assert.doesNotMatch(chronologicalScreen, /YOUR OPTIONAL PROGRESS/);
 assert.doesNotMatch(chronologicalScreen, /Read all \{chronologicalPlanMeta\.readingCount\} assignments/);
 assert.doesNotMatch(chronologicalScreen, /Read freely, or mark chapters/);
