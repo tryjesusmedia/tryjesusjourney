@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: tryjesusmedia/bibleandconflict
-          ref: b6b935bbc5d933496edafb32e9e2b6aca707f4a6
+          ref: d31a205d4a31a4ffc3b5968f74693a048ac320dc
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -54,7 +54,7 @@ jobs:
         run: eas build --platform android --profile production --local --non-interactive --freeze-credentials --output bible-and-conflict.aab
       - uses: actions/upload-artifact@v4
         with:
-          name: bible-and-conflict-android-6-lion-lamb-icon
+          name: bible-and-conflict-android-7-reading-ui
           path: bible-and-conflict.aab
           if-no-files-found: error
           retention-days: 14

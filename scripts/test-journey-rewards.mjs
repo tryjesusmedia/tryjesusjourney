@@ -94,8 +94,8 @@ assert.match(profileHook, /setError\(true\)/u, 'Profile failures must stay conta
 assert.match(leaderboardModal, /if \(!visible \|\| !signedIn\)[^]*return;/u, 'A guest must never trigger the authenticated leaderboard RPC');
 assert.match(leaderboardModal, /data=\{signedIn \? entries : \[\]\}/u);
 assert.match(leaderboardModal, /Sign In with Google to Join/u);
-assert.match(leaderboardModal, /onPress=\{\(\) => openAliasEditor\(item\.alias\)\}/u);
-assert.match(leaderboardModal, />Change Name</u);
+assert.match(leaderboardModal, /onPress=\{\(\) => openAliasEditor\(publicName/u);
+assert.match(leaderboardModal, />Change name</u);
 assert.doesNotMatch(leaderboardModal, />Change alias</u);
 assert.doesNotMatch(leaderboardModal, /<View\s+accessible\s+accessibilityLabel=\{`\$\{item\.isCurrentUser/u, 'The row must not hide the nested Change Name button from screen readers');
 assert.doesNotMatch(leaderboardModal, /YOUR PUBLIC ALIAS|styles\.aliasCard/u);

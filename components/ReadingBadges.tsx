@@ -6,9 +6,10 @@ import { usePathname } from 'expo-router';
 import { colors } from '@/constants/theme';
 import { chronologicalReadings, type ChronologicalReading } from '@/data/chronologicalBiblePlan';
 
+import { badgeSvg, getBadge, type ReadingBadge } from '@/lib/readingBadges';
+
 const readingById = new Map(chronologicalReadings.map(reading => [reading.id, reading]));
 const readingComplete = (reading: ChronologicalReading, completed: ReadonlySet<number>) => reading.bibleTasks.length > 0 && reading.bibleTasks.every(task => completed.has(task.progressIndex));
-import { badgeSvg, getBadge, type ReadingBadge } from '@/lib/readingBadges';
 
 export const READING_BADGE_SIZE = 64;
 const BadgeViewerContext = createContext<(badge: ReadingBadge) => void>(() => {});
