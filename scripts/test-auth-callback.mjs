@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const { createAuthCallbackHandler } = await import(new URL('../lib/authCallback.ts', import.meta.url));
 const calls=[];
@@ -30,3 +31,14 @@ assert.deepEqual(calls.at(-1),{access_token:'test-access',refresh_token:'test-re
 session=null;
 await assert.rejects(complete('tryjesusjourney://auth/callback#access_token=test-access&refresh_token=test-refresh'),/session is unavailable/);
 console.log('Callback tests passed: concurrent and late delivery, account switch, PKCE flow, errors, implicit tokens, and signed-out replay.');
+
+// Warm browser completion and cold/late callback routes must both land on Bible.
+// A history-based return can pop into an empty OAuth/browser screen.
+const callbackScreen = await readFile(new URL('../app/auth/callback.tsx', import.meta.url), 'utf8');
+const readingScreen = await readFile(new URL('../app/chronological.tsx', import.meta.url), 'utf8');
+assert.doesNotMatch(callbackScreen, /router\.(back|canGoBack)\(/);
+assert.match(callbackScreen, /if \(!mounted\) return;[\s\S]*?router\.replace\('\/\(tabs\)\/bible'\)/);
+assert.match(readingScreen, /await signInGoogle\(\);\s*if \(!completed\) return;[\s\S]*?router\.replace\('\/\(tabs\)\/bible'\)/);
+assert.doesNotMatch(readingScreen, /Alert\.alert\('Google connected'/);
+assert.match(callbackScreen, /onPress=\{\(\) => router\.replace\('\/\(tabs\)\/bible'\)\}/);
+console.log('Sign-in return checks passed: browser result, late callback, and recovery all target the Bible tab without history pops or a success alert.');

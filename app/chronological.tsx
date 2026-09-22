@@ -120,7 +120,9 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
     try {
       const completed = await signInGoogle();
       if (!completed) return;
-      Alert.alert('Google connected', 'Your Chron Bible progress will now stay in sync with the website.');
+      // The browser can finish before the callback route mounts. Both delivery
+      // paths target the same reading screen, without a blocking success alert.
+      router.replace('/(tabs)/bible');
     } catch (caught) {
       Alert.alert('Google sign-in did not finish', caught instanceof Error ? caught.message : 'Please try again.');
     } finally {

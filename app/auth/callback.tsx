@@ -24,8 +24,9 @@ export default function AuthCallback() {
     let mounted = true;
     void completeAuthCallback(callbackUrl ?? oauthRedirectUri).then(() => {
       if (!mounted) return;
-      if (router.canGoBack()) router.back();
-      else router.replace('/(tabs)/home');
+      // OAuth may arrive in a new task or over another callback screen.
+      // Always leave the callback for a real reading route, never browser history.
+      router.replace('/(tabs)/bible');
     }).catch(() => {
       if (mounted) setError('We could not finish signing you in. Please return to the app and try again.');
     });
@@ -37,7 +38,7 @@ export default function AuthCallback() {
       <Text style={styles.title}>{error ? 'Sign-in not completed' : 'Finishing sign-in…'}</Text>
       {error ? <>
         <Text style={styles.message}>{error}</Text>
-        <GoldButton title="Return to the app" onPress={() => router.replace('/(tabs)/home')} />
+        <GoldButton title="Return to the app" onPress={() => router.replace('/(tabs)/bible')} />
       </> : <ActivityIndicator accessibilityLabel="Finishing sign-in" color={colors.gold} size="large" />}
     </View>
   );
