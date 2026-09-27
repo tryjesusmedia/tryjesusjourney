@@ -1,6 +1,5 @@
 name: Bible and Conflict Android Release
 
-
 on:
   workflow_dispatch:
     inputs:
@@ -13,15 +12,12 @@ on:
     paths:
       - .github/workflows/eas-conflict-production.yml
 
-
 permissions:
   contents: read
-
 
 concurrency:
   group: conflict-android-production-build
   cancel-in-progress: false
-
 
 # Use the existing publisher's Expo connection. Checkout and signing identity
 # belong to the standalone Conflict app, not the Journey app.
@@ -63,3 +59,5 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Submit Bible and Conflict to Google Play production
+        if: github.event_name == 'workflow_dispatch' && inputs.submit_to_play
+        run: eas submit --platform android --profile production --path bible-and-conflict.aab --non-interactive --wait
