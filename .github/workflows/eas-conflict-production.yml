@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: tryjesusmedia/bibleandconflict
-          ref: 68a060533559de4fe47adc7f1aaff7100d5b0e00
+          ref: cc82562ed9621d39ba9141c2d01cf3e3aa8bdbf6
       - uses: actions/setup-node@v4
         with:
           node-version: 22
