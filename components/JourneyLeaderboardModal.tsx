@@ -137,21 +137,19 @@ export function JourneyLeaderboardModal({
         <Text style={styles.welcomeChange}>Change name</Text>
       </Pressable> : <Text style={styles.welcome}>Welcome, Friend!</Text>}
       {summary ? <>
-        <View style={styles.pointsLabel}><Eyebrow>YOUR JOURNEY POINTS</Eyebrow><Text style={styles.supportiveCopy}>(Each chapter earns 10 points)</Text></View>
+        <View style={styles.pointsLabel}><Eyebrow>YOUR JOURNEY POINTS</Eyebrow></View>
         <Text style={styles.pointsTotal}>{summary.journeyPoints.toLocaleString()}</Text>
         <Text style={styles.supportiveCopy}>{summary.completedChapters.toLocaleString()} of {JOURNEY_TOTAL_CHAPTERS.toLocaleString()} chapters complete</Text>
         <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.round(summary.nextMilestoneProgress * 100)}%` }]} /></View>
-        <Text style={styles.supportiveCopy}>{summary.nextMilestone === null ? 'You completed the full journey.' : summary.nextMilestone === 1 ? 'Complete your first chapter to reach your first milestone.' : `${summary.chaptersUntilNextMilestone} chapters to the ${summary.nextMilestone.toLocaleString()}-chapter milestone.`}</Text>
         <View style={styles.milestonePanel}><Eyebrow>MILESTONES</Eyebrow><Text style={styles.title}>Markers along the way</Text>
           <View style={styles.milestones}>{JOURNEY_MILESTONES.map(milestone => <View key={milestone} style={[styles.milestone, summary.completedChapters >= milestone && styles.earnedMilestone]}><Text style={styles.milestoneText}>{summary.completedChapters >= milestone ? '✓' : '◇'} {milestone === JOURNEY_TOTAL_CHAPTERS ? 'Journey complete' : `${milestone.toLocaleString()} chapters`}</Text></View>)}</View>
         </View>
-      </> : <Text style={styles.supportiveCopy}>Journey Points celebrate reading progress. Every chapter read is worth celebrating.</Text>}
+      </> : null}
       {inline ? <Pressable accessibilityRole="button" accessibilityState={{ expanded: leaderboardOpen }} onPress={() => setLeaderboardOpen(open => !open)} style={styles.leaderboardToggle}><View><Eyebrow>ALL READERS</Eyebrow><Text style={styles.title}>Journey leaderboard</Text></View><Text style={styles.closeButtonText}>{leaderboardOpen ? '−' : '+'}</Text></Pressable> : null}
 
       {!signedIn && (!inline || leaderboardOpen) ? (
         <View style={styles.joinCard}>
           <Text style={styles.joinTitle}>Join with a public leaderboard name</Text>
-          <Text style={styles.joinBody}>Sign in with Google to view the leaderboard. You can customize your public name; your email, photo, and account ID are never shown here.</Text>
           <GoldButton title="Sign In with Google to Join" loading={signInBusy} onPress={() => { void onSignIn(); }} />
         </View>
       ) : null}
