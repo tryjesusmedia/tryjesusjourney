@@ -104,6 +104,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
 
   const completedSet = useMemo(() => new Set(progress.completed), [progress.completed]);
   const journeyRewards = useMemo(() => summarizeJourneyRewards(progress.completed), [progress.completed]);
+  const nextChapter = chronologicalReadings.flatMap((reading) => reading.bibleTasks).find((task) => !completedSet.has(task.progressIndex));
   const percent = Math.round((progress.completed.length / chronologicalPlanMeta.chapterCount) * 100);
   const listItems = useMemo<ChronologicalListItem[]>(() => {
     if (activeView !== 'journey') return [];
@@ -186,7 +187,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
           ? <Pressable onPress={() => router.back()} style={styles.backButton} accessibilityRole="button"><Text style={styles.backText}>‹ Back</Text></Pressable>
           : <View />}
         <View style={styles.topbarActions}>
-          <Text style={styles.translation}>KJV + WEB · NATIVE</Text>
+          <Text style={styles.translation}>TRY JESUS MEDIA</Text>
           <Pressable onPress={() => setMenuOpen((open) => !open)} style={[styles.menuButton, menuOpen ? styles.menuButtonOpen : undefined]} accessibilityRole="button" accessibilityLabel="Chron Bible menu" accessibilityState={{ expanded: menuOpen }}>
             <View style={styles.menuBar} /><View style={styles.menuBar} /><View style={styles.menuBar} />
           </Pressable>
@@ -201,7 +202,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
             : <GoldButton title="Sign In to Sync" loading={syncBusy || authLoading} onPress={connectGoogle} />}
         </View>
       ) : null}
-      <View style={styles.fixedTitleRow}><View style={styles.fixedTitleCopy}><Eyebrow>READ IN HISTORICAL SEQUENCE</Eyebrow><Text style={styles.title}>Chronological Bible</Text></View></View>
+      <View style={styles.fixedTitleRow}><View style={styles.fixedTitleCopy}><Text style={styles.title}>Chronological Bible</Text></View></View>
       <View style={styles.tabs} accessibilityRole="tablist">
         {(['journey', 'progress', 'leaderboard'] as const).map((tab) => {
           const selected = activeView === tab;
@@ -216,12 +217,13 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
   const listHeader = (
     <View style={styles.headerStack}>
       {activeView === 'journey' ? <View>
-        <Eyebrow>THE COMPLETE SEQUENCE</Eyebrow>
-        <Text style={styles.viewTitle}>The chronological journey</Text>
-        <Text style={styles.viewDescription}>Across {chronologicalBiblePlan.length} major historical sections, the complete journey is organized into {chronologicalReadings.length} manageable, named reading tasks, including all 42 chapters of Job between Genesis 11 and Genesis 12.</Text>
+        <Text style={styles.readingPromise}>Read the Bible in the order it happened.</Text>
+        <Text style={styles.nextChapter}>{nextChapter ? `Up next: ${nextChapter.label}` : 'You’ve completed the whole journey.'}</Text>
+        <GoldButton title={nextChapter ? (progress.completed.length ? 'Resume reading' : 'Start reading') : 'Read Genesis again'} onPress={() => openChapter(nextChapter?.label ?? 'Genesis 1')} />
+        <Text style={styles.browseLabel}>Or choose a reading below</Text>
       </View> : null}
       {activeView === 'progress' ? <>
-        <View><Eyebrow>YOUR READING PROGRESS</Eyebrow><Text style={styles.viewTitle}>Continue the story</Text><Text style={styles.viewDescription}>{session ? 'Your chapter progress and Journey Points are synced across your signed-in devices.' : 'Sign in with Google whenever you want your progress and Journey Points synced across devices.'}</Text></View>
+        <View><Eyebrow>YOUR READING PROGRESS</Eyebrow><Text style={styles.viewTitle}>Continue the story</Text><Text style={styles.viewDescription}>{session ? 'Your progress is saved across your signed-in devices.' : 'Your progress stays on this phone. Sign in to sync across devices.'}</Text></View>
         {!session ? <OutlineButton title="Sign in to save progress" onPress={connectGoogle} /> : null}
         <EarnedReadingBadges completed={completedSet} />
         <View style={styles.statGrid}>{[
@@ -320,6 +322,9 @@ export default function ChronologicalBibleScreen() {
 }
 
 const styles = StyleSheet.create({
+  readingPromise: { color: colors.ivory, fontSize: 23, lineHeight: 31, fontWeight: '600', marginBottom: 16 },
+  nextChapter: { color: colors.muted, fontSize: 18, lineHeight: 27, marginBottom: 18 },
+  browseLabel: { color: colors.muted, fontSize: 15, marginTop: 28, marginBottom: 4 },
   viewTitle: { color: colors.text, fontSize: 28, lineHeight: 35, fontWeight: '900', marginBottom: 10 },
   viewDescription: { color: colors.ivory, fontSize: 16, lineHeight: 24 },
   statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
@@ -331,14 +336,14 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 18, paddingTop: 12 }, fixedHeader: { backgroundColor: colors.charcoal, paddingHorizontal: 18, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border }, headerStack: { gap: 14, marginBottom: 16 },
   topbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, topbarActions: { flexDirection: 'row', alignItems: 'center', gap: 12 }, backButton: { paddingVertical: 8, paddingRight: 14 }, backText: { color: colors.gold, fontSize: 16, fontWeight: '800' }, translation: { color: colors.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
   menuButton: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', gap: 4 }, menuButtonOpen: { borderColor: colors.gold, backgroundColor: colors.panel2 }, menuBar: { width: 20, height: 2, borderRadius: 2, backgroundColor: colors.gold }, menuCard: { marginTop: 8, marginBottom: 12, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.gold, backgroundColor: colors.panel2 }, menuText: { color: colors.ivory, fontSize: 13, lineHeight: 20, marginBottom: 13 },
-  fixedTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 }, fixedTitleCopy: { flex: 1 }, title: { color: colors.text, fontSize: 28, fontWeight: '900', lineHeight: 34 }, progressCard: { backgroundColor: colors.plum }, progressHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, progressNumber: { color: colors.text, fontSize: 24, fontWeight: '900' }, progressCount: { color: colors.gold, fontSize: 15, fontWeight: '900' }, progressTrack: { height: 9, borderRadius: 20, backgroundColor: 'rgba(255,255,255,.13)', overflow: 'hidden', marginVertical: 14 }, progressFill: { height: '100%', borderRadius: 20, backgroundColor: colors.gold },
-  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tab: { flexGrow: 1, minHeight: 48, paddingHorizontal: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.gold, borderRadius: 12 },
+  fixedTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 }, fixedTitleCopy: { flex: 1 }, title: { color: colors.text, fontSize: 32, fontWeight: '800', lineHeight: 39 }, progressCard: { backgroundColor: colors.plum }, progressHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, progressNumber: { color: colors.text, fontSize: 24, fontWeight: '900' }, progressCount: { color: colors.gold, fontSize: 15, fontWeight: '900' }, progressTrack: { height: 9, borderRadius: 20, backgroundColor: 'rgba(255,255,255,.13)', overflow: 'hidden', marginVertical: 14 }, progressFill: { height: '100%', borderRadius: 20, backgroundColor: colors.gold },
+  tabs: { flexDirection: 'row', gap: 6 },
+  tab: { flex: 1, minHeight: 48, paddingHorizontal: 6, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: 12 },
   tabSelected: { backgroundColor: colors.gold },
-  tabText: { color: colors.gold, fontSize: 16, fontWeight: '800' },
+  tabText: { color: colors.gold, fontSize: 15, fontWeight: '700', textAlign: 'center' },
   tabTextSelected: { color: colors.charcoal },
   separator: { height: 12 },
-  sectionCard: { backgroundColor: colors.plum, borderColor: 'rgba(238,189,74,.38)' }, sectionCardOpen: { backgroundColor: colors.plum2, borderColor: colors.gold }, sectionTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, sectionNumber: { color: colors.gold, fontSize: 10, fontWeight: '900', letterSpacing: 1.5 }, sectionChevron: { color: colors.gold, fontSize: 26, lineHeight: 27, fontWeight: '500' }, sectionTitle: { color: colors.text, fontSize: 19, lineHeight: 25, fontWeight: '900', marginTop: 7 }, sectionMeta: { color: colors.ivory, fontSize: 12, lineHeight: 18, marginTop: 6 }, sectionAction: { color: colors.gold, fontSize: 12, fontWeight: '900', marginTop: 12 },
+  sectionCard: { backgroundColor: colors.panel, borderColor: colors.border }, sectionCardOpen: { backgroundColor: colors.plum, borderColor: colors.border }, sectionTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, sectionNumber: { color: colors.gold, fontSize: 10, fontWeight: '900', letterSpacing: 1.5 }, sectionChevron: { color: colors.gold, fontSize: 26, lineHeight: 27, fontWeight: '500' }, sectionTitle: { color: colors.text, fontSize: 19, lineHeight: 25, fontWeight: '900', marginTop: 7 }, sectionMeta: { color: colors.ivory, fontSize: 12, lineHeight: 18, marginTop: 6 }, sectionAction: { color: colors.gold, fontSize: 12, fontWeight: '900', marginTop: 12 },
   readingTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 }, readingTitleCopy: { flex: 1, minWidth: 0 },
   expandedCard: { borderColor: colors.gold, backgroundColor: colors.panel2 }, readingTopline: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 }, readingNumber: { color: colors.gold, fontSize: 10, fontWeight: '900', letterSpacing: 1.4 }, readingCount: { color: colors.muted, fontSize: 11, fontWeight: '800' }, readingTitle: { color: colors.text, fontSize: 19, fontWeight: '900', lineHeight: 25, marginTop: 8 }, sectionLabel: { color: colors.muted, fontSize: 12, marginTop: 5 }, expandLabel: { color: colors.gold, fontSize: 12, fontWeight: '900', marginTop: 12 }, expandedContent: { marginTop: 18, gap: 10 }, chapterBlock: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 }, chapterRow: { flexDirection: 'row', alignItems: 'center', gap: 11 }, checkbox: { width: 30, height: 30, borderRadius: 9, borderWidth: 1, borderColor: colors.gold, alignItems: 'center', justifyContent: 'center' }, checkboxComplete: { backgroundColor: colors.green, borderColor: colors.green }, checkmark: { color: colors.charcoal, fontWeight: '900', fontSize: 18 }, chapterActions: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'stretch', borderRadius: 10, backgroundColor: 'rgba(255,255,255,.025)' }, chapterButton: { flex: 1, minWidth: 0, justifyContent: 'center', paddingHorizontal: 8 }, chapterLabel: { color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: '900' }, chapterComplete: { color: colors.muted, textDecorationLine: 'line-through' }, chapterDivider: { width: 1, marginVertical: 8, backgroundColor: colors.border }, gatewayButton: { flex: 1.25, minWidth: 0, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 7, paddingVertical: 7 }, gatewayLabel: { color: colors.gold, fontSize: 11, lineHeight: 15, fontWeight: '900', textAlign: 'center' },
 });
