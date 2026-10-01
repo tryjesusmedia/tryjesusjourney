@@ -196,7 +196,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
       {menuOpen ? (
         <View style={styles.menuCard}>
           <Eyebrow>CHRON BIBLE SYNC</Eyebrow>
-          <Text style={styles.menuText}>{session ? `Signed in as ${session.user.email ?? 'your Google account'}.` : 'Sign in only if you want your progress to sync with the website.'}</Text>
+          {session ? <Text style={styles.menuText}>{session.user.email ?? 'Signed in'}</Text> : null}
           {session
             ? <OutlineButton title={syncBusy ? 'Preparing on-phone copy…' : 'Sign Out of Google Sync'} disabled={syncBusy} onPress={disconnectGoogle} />
             : <GoldButton title="Sign In to Sync" loading={syncBusy || authLoading} onPress={connectGoogle} />}
@@ -223,7 +223,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
         <Text style={styles.browseLabel}>Or choose a reading below</Text>
       </View> : null}
       {activeView === 'progress' ? <>
-        <View><Eyebrow>YOUR READING PROGRESS</Eyebrow><Text style={styles.viewTitle}>Continue the story</Text><Text style={styles.viewDescription}>{session ? 'Your progress is saved across your signed-in devices.' : 'Your progress stays on this phone. Sign in to sync across devices.'}</Text></View>
+        <View><Eyebrow>YOUR READING PROGRESS</Eyebrow><Text style={styles.viewTitle}>Continue the story</Text></View>
         {!session ? <OutlineButton title="Sign in to save progress" onPress={connectGoogle} /> : null}
         <EarnedReadingBadges completed={completedSet} />
         <View style={styles.statGrid}>{[
