@@ -18,35 +18,26 @@ const reminderPicker = await readFile(new URL('../components/ReminderPickerModal
 
 const bibleDecodedUrl = 'https://tryjesusmedia.com/bibledecoded/';
 const oldBibleDecodedUrl = 'https://try-jesus-new-york-shop.fourthwall.com/products/bible-decoded-by-pastor-kal-roller';
-const bibleDecodedBlurb = "What if the Bible contains layers of meaning you've never noticed before? Discover simply study techniques that can help Scripture come alive, reveal powerful connections, and turn ordinary Bible reading into an eye-opening journey of discovery.";
-assert.match(links, new RegExp(bibleDecodedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+assert.match(links, /https:\/\/tryjesusmedia\.com\/bibledecoded\//);
 assert.doesNotMatch(links, new RegExp(oldBibleDecodedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-assert.ok(home.includes(bibleDecodedBlurb), 'Bible Decoded must use the requested blurb');
-for (const screen of [home, bibleDecoded]) {
-  assert.match(screen, /<Text style=\{styles\.oldPrice\}>\$227<\/Text>/);
-  assert.match(screen, /<Text style=\{styles\.currentPrice\}>\$97!<\/Text>/);
-  assert.match(screen, /Current price for the next 100 customers\./);
-  assert.match(screen, /oldPrice:\s*\{[^}]*textDecorationLine:\s*'line-through'/);
-}
-const homeOffers = ['styles.readingCard', 'styles.bibleDecodedCard', '<YouTubeOffer />', '<LiveDiscussionOffer />', 'styles.whatsappCard', 'styles.askCard'];
-for (let index = 1; index < homeOffers.length; index += 1) {
-  assert.ok(home.indexOf(homeOffers[index - 1]) < home.indexOf(homeOffers[index]), `Home offer ${homeOffers[index - 1]} must appear before ${homeOffers[index]}`);
-}
-assert.doesNotMatch(home, /random-fourthwall-products|Programs & resources selected for you/);
-
-assert.ok(tabs.indexOf('name="home"') < tabs.indexOf('name="bible"'));
-assert.ok(tabs.indexOf('name="bible"') < tabs.indexOf('name="programs"'));
-assert.ok(tabs.indexOf('name="programs"') < tabs.indexOf('name="journey"'));
-assert.ok(tabs.indexOf('name="journey"') < tabs.indexOf('name="more"'));
-assert.match(tabs, /name="bible" options=\{\{ title: 'Bible'/);
-const bibleTabDeclaration = tabs.slice(tabs.indexOf('name="bible"'), tabs.indexOf('name="programs"'));
-assert.doesNotMatch(bibleTabDeclaration, /tabPress/);
+assert.match(home, /<Redirect href="\/\(tabs\)\/bible"/);
+assert.match(tabs, /initialRouteName="bible"/);
+const visibleTabs = [...tabs.matchAll(/<Tabs.Screen name="([^"]+)" options=\{\{ title:/g)].map((match) => match[1]);
+assert.deepEqual(visibleTabs, ['bible', 'programs', 'more']);
+assert.match(tabs, /title: 'Chronological Bible'/);
+assert.doesNotMatch(tabs, /event.preventDefault|Linking.openURL/);
 assert.match(bibleTab, /<ChronologicalBibleContent showBackButton=\{false\} \/>/);
-assert.match(home, /router\.push\('\/\(tabs\)\/bible'\)/);
-assert.match(tabs, /name="programs"[^]*title: 'Bible Decoded'[^]*Linking\.openURL\(BIBLE_DECODED_URL\)/);
-assert.match(tabs, /name="journey" options=\{\{ title: 'Guides'/);
-assert.match(tabs, /name="ask" options=\{\{ href: null \}\}/);
-assert.match(tabs, /name="live" options=\{\{ href: null \}\}/);
+assert.match(bibleDecoded, /Explore Bible Decoded/);
+assert.match(bibleDecoded, /Linking.openURL\(BIBLE_DECODED_URL\)/);
+assert.doesNotMatch(bibleDecoded, /\$227|\$97|next 100/);
+for (const route of ['journey', 'ask', 'live', 'videos', 'journal']) {
+  assert.ok(tabs.includes(`name="${route}" options={detailOptions(`));
+  assert.ok(more.includes(`router.push('/(tabs)/${route}')`));
+}
+assert.match(more, /Additional perks/);
+assert.match(more, /WHATSAPP_GROUP_URL/);
+assert.match(more, /TRY_JESUS_MEDIA_STORE_URL/);
+assert.match(more, /Delete sync account and online data/);
 
 for (const screen of [liveOffer, live]) {
   assert.match(screen, /<ReminderPickerModal visible=\{reminderOpen\} onRequestClose=\{\(\) => setReminderOpen\(false\)\} onSelect=\{remind\} \/>/);
@@ -56,20 +47,13 @@ assert.match(reminderPicker, /style=\{styles\.backdrop\} onPress=\{onRequestClos
 for (const label of ['24 hours before', '1 hour before', '15 minutes before', 'At start time']) {
   assert.ok(reminderPicker.includes(label), `Shared reminder picker must include ${label}`);
 }
-assert.match(home, /Linking\.openURL\(WHATSAPP_GROUP_URL\)/);
+
 assert.ok(live.indexOf('NEXT LIVE DISCUSSION') < live.indexOf('FELLOWSHIP BETWEEN LIVE DISCUSSIONS'));
 assert.match(live, /Join the Try Jesus Media WhatsApp group/);
 assert.match(live, /Linking\.openURL\(WHATSAPP_GROUP_URL\)/);
 assert.match(live, /contentContainerStyle=\{styles\.content\}/);
 assert.match(more, /Powered by FaithCraft\.Agency/);
-assert.match(more, /Linking\.openURL\('https:\/\/faithcraft\.agency\/'\)/);
-const moreOffers = ['<YouTubeOffer />', '<LiveDiscussionOffer />', 'styles.whatsappCard', 'styles.askCard', 'Try Jesus Media Store', 'Questions &amp; Privacy', '>Members<'];
-for (let index = 1; index < moreOffers.length; index += 1) {
-  assert.ok(more.indexOf(moreOffers[index - 1]) < more.indexOf(moreOffers[index]), `More offer ${moreOffers[index - 1]} must appear before ${moreOffers[index]}`);
-}
-assert.doesNotMatch(more, /Chron Bible Sync|Disconnect Google|Sign In with Google|Sign Out/);
-assert.match(more, /Delete Sync Account and Online Data/);
-
+assert.match(more, /openLink\('https:\/\/faithcraft\.agency\/'\)/);
 assert.match(youtubeOffer, /latest three episodes/i);
 assert.match(youtubeOffer, /TRY_JESUS_MEDIA_YOUTUBE_URL/);
 assert.match(youtubeOffer, /TRY_JESUS_MEDIA_SECOND_YOUTUBE_URL/);

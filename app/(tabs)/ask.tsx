@@ -85,8 +85,8 @@ export default function AskPastorKalScreen() {
       <View style={styles.header}>
         <Text style={styles.eyebrow}>PRIVATE · WELCOMING</Text>
         <Text style={styles.title}>Ask Pastor Kal</Text>
-        <Text style={styles.subtitle}>Hi, I’m an AI chatbot based on the real Pastor Kal. I’ll thoughtfully answer your questions with Bible-based, Christ-centered guidance that reveals God’s heart.</Text>
-        <Text style={[styles.subtitle, styles.contactSubtitle]}>This Pastor Kal is an AI chat bot. If you&apos;d like to contact the real human Pastor Kal, join the WhatsApp family chat <Text accessibilityRole="link" accessibilityLabel="Join the WhatsApp family chat" onPress={() => Linking.openURL(WHATSAPP_GROUP_URL)} style={styles.contactLink}>here</Text>.</Text>
+        <Text style={styles.subtitle}>Ask a Bible question and explore Scripture with our AI guide.</Text>
+        <Text style={[styles.subtitle, styles.contactSubtitle]}>To talk with the real Pastor Kal, join the WhatsApp family <Text accessibilityRole="link" accessibilityLabel="Join the WhatsApp family chat" onPress={() => Linking.openURL(WHATSAPP_GROUP_URL)} style={styles.contactLink}>here</Text>.</Text>
       </View>
 
       <View style={styles.composer}>

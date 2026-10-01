@@ -49,7 +49,7 @@ export default function LiveScreen() {
             ))}
           </View>
           <View style={styles.buttons}>
-            <GoldButton title="Enter Zoom Call Here" onPress={() => Linking.openURL(discussion.zoom_url)} />
+            <GoldButton title="Join Zoom discussion" onPress={() => Linking.openURL(discussion.zoom_url)} />
             <OutlineButton title="Remind Me" onPress={() => setReminderOpen(true)} />
           </View>
         </Card>
@@ -57,7 +57,7 @@ export default function LiveScreen() {
       <Card style={styles.whatsappCard}>
         <Eyebrow>FELLOWSHIP BETWEEN LIVE DISCUSSIONS</Eyebrow>
         <Text style={styles.invitationTitle}>Join the Try Jesus Media WhatsApp group</Text>
-        <Text style={styles.invitationBody}>Fellowship with others in this community, ask Bible questions, request prayer, share insights, and keep the conversation going between our live Zoom discussions.</Text>
+        <Text style={styles.invitationBody}>Keep the conversation going. Ask questions and connect with our WhatsApp family.</Text>
         <GoldButton title="Join the WhatsApp Group" onPress={() => Linking.openURL(WHATSAPP_GROUP_URL)} />
       </Card>
       <ReminderPickerModal visible={reminderOpen} onRequestClose={() => setReminderOpen(false)} onSelect={remind} />
@@ -67,7 +67,7 @@ export default function LiveScreen() {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.charcoal },
-  content: { padding: 20, paddingTop: 52, paddingBottom: 110, gap: 18 },
+  content: { padding: 20, paddingTop: 24, paddingBottom: 110, gap: 18 },
   title: { color: colors.text, fontSize: 25, fontWeight: '900', lineHeight: 31 },
   note: { color: colors.muted, fontSize: 12, fontWeight: '700', marginTop: 4 },
   countdown: { flexDirection: 'row', gap: 8, marginVertical: 18 },
