@@ -19,12 +19,12 @@ export function OutlineButton({ title, onPress, disabled }: { title: string; onP
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.panel, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 20 },
-  eyebrow: { color: colors.gold, letterSpacing: 2, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', marginBottom: 7 },
-  button: { backgroundColor: colors.gold, borderRadius: radius.md, minHeight: 50, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { color: colors.charcoal, fontWeight: '900', fontSize: 15 },
-  outline: { borderColor: colors.gold, borderWidth: 1, borderRadius: radius.md, minHeight: 48, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
-  outlineText: { color: colors.ivory, fontWeight: '800' },
+  card: { backgroundColor: colors.panel, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: 20 },
+  eyebrow: { color: colors.gold, letterSpacing: 1, fontSize: 13, fontWeight: '800', textTransform: 'uppercase', marginBottom: 7 },
+  button: { backgroundColor: colors.gold, borderRadius: radius.md, minHeight: 56, paddingVertical: 14, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
+  buttonText: { color: colors.charcoal, fontWeight: '800', fontSize: 18, textAlign: 'center' },
+  outline: { borderColor: colors.border, borderWidth: 1, borderRadius: radius.md, minHeight: 52, paddingVertical: 12, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
+  outlineText: { color: colors.ivory, fontWeight: '700', fontSize: 17, textAlign: 'center' },
   pressed: { opacity: .78 },
   disabled: { opacity: .45 },
 });
