@@ -1,0 +1,116 @@
+name: Apple Production Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/eas-ios-production.yml
+      - .github/eas-ios-build-trigger
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-production-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build App Store IPA
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Validate document plan and app behavior
+        run: |
+          npm run typecheck
+          npm run lint
+          node scripts/test-document-plan.mjs
+          node scripts/test-document-progress.cjs
+          npm run test:chronological-state
+          npm run test:bible-reader
+          npm run test:journey-rewards
+          npm run test:auth-callback
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Check Apple build number
+        run: |
+          eas build:list --platform ios --distribution store --limit 50 --json --non-interactive > /tmp/ios-previous.json
+          node - <<'NODE'
+          const fs = require('fs');
+          const builds = JSON.parse(fs.readFileSync('/tmp/ios-previous.json', 'utf8'));
+          const config = require('./app.json').expo;
+          console.log(builds.map(b => ({id: b.id, version: b.appVersion, build: b.appBuildVersion, status: b.status})));
+          if (builds.some(b => Number(b.appBuildVersion) >= Number(config.ios.buildNumber))) throw new Error('Apple build number must exceed existing EAS builds.');
+          NODE
+      - name: Start signed Apple build using existing credentials
+        run: eas build --platform ios --profile production --non-interactive --freeze-credentials --no-wait --json > /tmp/ios-build.json
+      - name: Record build ID
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('/tmp/ios-build.json', 'utf8'));
+          const b = Array.isArray(data) ? data[0] : data;
+          if (!b.id) throw new Error('Missing EAS build ID');
+          fs.writeFileSync('apple-build-info.json', JSON.stringify({id:b.id,version:'0.9.0',build:'7',sourceCommit:process.env.GITHUB_SHA},null,2));
+          console.log('EAS build:', b.id);
+          NODE
+      - name: Save Apple build reference
+        uses: actions/upload-artifact@v4
+        with:
+          name: try-jesus-apple-build-reference
+          path: apple-build-info.json
+          retention-days: 14
+      - name: Wait for and download the signed IPA
+        run: node scripts/download-ios-build.mjs
+      - name: Save App Store IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: try-jesus-the-journey-apple-ipa
+          path: |
+            Try-Jesus-Journey-v0.9.0-build7.ipa
+            apple-build-info.json
+          if-no-files-found: error
+          retention-days: 14
+  verify:
+    name: Verify Apple signature and package
+    needs: build
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: try-jesus-the-journey-apple-ipa
+      - name: Verify App Store package
+        run: |
+          unzip -q Try-Jesus-Journey-v0.9.0-build7.ipa -d inspected
+          APP=$(find inspected/Payload -maxdepth 1 -name '*.app' -type d -print -quit)
+          test -n "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          security cms -D -i "$APP/embedded.mobileprovision" > profile.plist
+          python3 - "$APP" <<'PY'
+          import sys, plistlib, pathlib, datetime
+          app=pathlib.Path(sys.argv[1])
+          info=plistlib.loads((app/'Info.plist').read_bytes())
+          profile=plistlib.loads(pathlib.Path('profile.plist').read_bytes())
+          assert info['CFBundleIdentifier']=='com.tryjesusmedia.journey'
+          assert info['CFBundleShortVersionString']=='0.9.0'
+          assert info['CFBundleVersion']=='7'
+          assert profile['ExpirationDate']>datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+          assert not profile.get('ProvisionedDevices')
+          assert not profile.get('ProvisionsAllDevices',False)
+          assert not profile['Entitlements'].get('get-task-allow',False)
+          assert profile['Entitlements']['application-identifier'].endswith('.com.tryjesusmedia.journey')
+          bundle=(app/'main.jsbundle').read_bytes()
+          assert b'chronological-bible-doc-v5' in bundle
+          assert b'get_chronbible_doc_leaderboard' in bundle
+          print('Verified App Store distribution, signature, version 0.9.0 (7), and document plan.')
+          PY
