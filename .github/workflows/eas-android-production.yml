@@ -50,6 +50,14 @@ jobs:
       - name: Test sign-in callback handling
         run: npm run test:auth-callback
 
+      - name: Validate the document edition and existing reader behavior
+        run: |
+          node scripts/test-document-plan.mjs
+          node scripts/test-document-progress.cjs
+          npm run test:chronological-state
+          npm run test:bible-reader
+          npm run test:journey-rewards
+
       - name: Set up Expo and EAS
         uses: expo/expo-github-action@v8
         with:

@@ -1,6 +1,6 @@
 export const JOURNEY_POINTS_PER_CHAPTER = 10;
-export const JOURNEY_TOTAL_CHAPTERS = 1205;
-export const JOURNEY_MILESTONES = [1, 25, 100, 250, 500, 750, 1000, 1205] as const;
+export const JOURNEY_TOTAL_CHAPTERS = 1440;
+export const JOURNEY_MILESTONES = [1, 25, 100, 250, 500, 750, 1000, 1440] as const;
 
 export type JourneyRewardSummary = {
   completedChapters: number;

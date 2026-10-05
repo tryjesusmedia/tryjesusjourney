@@ -5,13 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/constants/theme';
 
 const Icon = ({ label, color }: { label: string; color: ColorValue }) => <Text accessibilityElementsHidden style={{ color, fontSize: 22 }}>{label}</Text>;
-const BackToMore = () => <Pressable accessibilityRole="button" accessibilityLabel="Back to More" onPress={() => router.navigate('/(tabs)/more')} style={{ minHeight: 48, justifyContent: 'center', paddingHorizontal: 18 }}><Text style={{ color: colors.gold, fontSize: 17 }}>‹ More</Text></Pressable>;
+const BackToMore = () => <Pressable accessibilityRole="button" accessibilityLabel="Back to More" onPress={() => router.navigate('/(tabs)/more')} style={{ minHeight: 48, justifyContent: 'center', paddingHorizontal: 10, width: 76 }}><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={{ color: colors.gold, fontSize: 14 }}>‹ More</Text></Pressable>;
 
 export default function TabsLayout() {
   const { bottom } = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
   const label = (title: string, color: ColorValue) => <Text style={{ color, fontWeight: '700', fontSize: 13, lineHeight: 17, textAlign: 'center', paddingHorizontal: 3 }}>{title}</Text>;
-  const detailOptions = (title: string) => ({ href: null, title, headerShown: true, headerLeft: BackToMore });
+  const detailOptions = (title: string) => ({ href: null, title, headerShown: true, headerLeft: BackToMore, headerTitle: () => <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{title}</Text> });
 
   return (
     <Tabs initialRouteName="bible" backBehavior="history" screenOptions={{

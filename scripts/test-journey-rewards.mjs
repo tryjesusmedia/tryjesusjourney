@@ -11,13 +11,13 @@ import {
 } from '../lib/journeyRewardsCore.ts';
 
 assert.equal(JOURNEY_POINTS_PER_CHAPTER, 10);
-assert.equal(JOURNEY_TOTAL_CHAPTERS, 1205);
-assert.deepEqual([...JOURNEY_MILESTONES], [1, 25, 100, 250, 500, 750, 1000, 1205]);
+assert.equal(JOURNEY_TOTAL_CHAPTERS, 1440);
+assert.deepEqual([...JOURNEY_MILESTONES], [1, 25, 100, 250, 500, 750, 1000, 1440]);
 
 assert.deepEqual(
-  distinctValidCompletedChapterIndices([1204, 0, 0, 24, -1, 1205, 1.5, Number.NaN, null, true, '', '2']),
-  [0, 24, 1204],
-  'Only distinct integer chapter indices from 0 through 1204 earn points',
+  distinctValidCompletedChapterIndices([1439, 0, 0, 24, -1, 1440, 1.5, Number.NaN, null, true, '', '2']),
+  [0, 24, 1439],
+  'Only distinct integer chapter indices from 0 through 1439 earn points',
 );
 assert.deepEqual(summarizeJourneyRewards([]), {
   completedChapters: 0,
@@ -35,9 +35,9 @@ assert.deepEqual(summarizeJourneyRewards(Array.from({ length: 25 }, (_, index) =
   chaptersUntilNextMilestone: 75,
   nextMilestoneProgress: .25,
 });
-const completeSummary = summarizeJourneyRewards(Array.from({ length: 1205 }, (_, index) => index));
-assert.equal(completeSummary.journeyPoints, 12050);
-assert.equal(completeSummary.currentMilestone, 1205);
+const completeSummary = summarizeJourneyRewards(Array.from({ length: 1440 }, (_, index) => index));
+assert.equal(completeSummary.journeyPoints, 14400);
+assert.equal(completeSummary.currentMilestone, 1440);
 assert.equal(completeSummary.nextMilestone, null);
 assert.equal(completeSummary.chaptersUntilNextMilestone, 0);
 assert.equal(completeSummary.nextMilestoneProgress, 1);
@@ -88,7 +88,7 @@ assert.doesNotMatch(statusCard, /not spiritual worth|alias|<Card/iu);
 
 assert.match(service, /supabase\.rpc\('ensure_journey_profile'\)/u);
 assert.match(service, /supabase\.rpc\('update_journey_alias', \{ p_alias: nextAlias \}\)/u);
-assert.match(service, /supabase\.rpc\('get_journey_leaderboard'\)/u);
+assert.match(service, /supabase\.rpc\('get_chronbible_doc_leaderboard'\)/u);
 assert.match(profileHook, /if \(!userId\)[^]*setAlias\(null\)/u, 'Signed-out readers must not request a public alias');
 assert.match(profileHook, /setError\(true\)/u, 'Profile failures must stay contained in the optional reward layer');
 

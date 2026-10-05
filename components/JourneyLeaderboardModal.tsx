@@ -139,10 +139,10 @@ export function JourneyLeaderboardModal({
       {summary ? <>
         <View style={styles.pointsLabel}><Eyebrow>YOUR JOURNEY POINTS</Eyebrow></View>
         <Text style={styles.pointsTotal}>{summary.journeyPoints.toLocaleString()}</Text>
-        <Text style={styles.supportiveCopy}>{summary.completedChapters.toLocaleString()} of {JOURNEY_TOTAL_CHAPTERS.toLocaleString()} chapters complete</Text>
+        <Text style={styles.supportiveCopy}>{summary.completedChapters.toLocaleString()} of {JOURNEY_TOTAL_CHAPTERS.toLocaleString()} passages complete</Text>
         <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.round(summary.nextMilestoneProgress * 100)}%` }]} /></View>
         <View style={styles.milestonePanel}><Eyebrow>MILESTONES</Eyebrow><Text style={styles.title}>Markers along the way</Text>
-          <View style={styles.milestones}>{JOURNEY_MILESTONES.map(milestone => <View key={milestone} style={[styles.milestone, summary.completedChapters >= milestone && styles.earnedMilestone]}><Text style={styles.milestoneText}>{summary.completedChapters >= milestone ? '✓' : '◇'} {milestone === JOURNEY_TOTAL_CHAPTERS ? 'Journey complete' : `${milestone.toLocaleString()} chapters`}</Text></View>)}</View>
+          <View style={styles.milestones}>{JOURNEY_MILESTONES.map(milestone => <View key={milestone} style={[styles.milestone, summary.completedChapters >= milestone && styles.earnedMilestone]}><Text style={styles.milestoneText}>{summary.completedChapters >= milestone ? '✓' : '◇'} {milestone === JOURNEY_TOTAL_CHAPTERS ? 'Journey complete' : `${milestone.toLocaleString()} passages`}</Text></View>)}</View>
         </View>
       </> : null}
       {inline ? <Pressable accessibilityRole="button" accessibilityState={{ expanded: leaderboardOpen }} onPress={() => setLeaderboardOpen(open => !open)} style={styles.leaderboardToggle}><View><Eyebrow>ALL READERS</Eyebrow><Text style={styles.title}>Journey leaderboard</Text></View><Text style={styles.closeButtonText}>{leaderboardOpen ? '−' : '+'}</Text></Pressable> : null}
@@ -183,7 +183,7 @@ export function JourneyLeaderboardModal({
                   <Text numberOfLines={2} style={styles.entryAlias}>{item.alias}</Text>
                   {item.isCurrentUser ? <Text style={styles.youBadge}>YOU</Text> : null}
                 </View>
-                <Text style={styles.entryMeta}>{item.completedChapters} chapter{item.completedChapters === 1 ? '' : 's'} completed</Text>
+                <Text style={styles.entryMeta}>{item.completedChapters} passage{item.completedChapters === 1 ? '' : 's'} completed</Text>
 
               </View>
               <View style={styles.entryPoints}>

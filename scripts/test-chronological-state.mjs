@@ -34,12 +34,12 @@ for (const reading of plan.readings) {
   }
 }
 const maps = {
-  previousChapterMigration: plan.previousChapterMigration,
-  previousReadingMigration: plan.previousReadingMigration,
-  taskChapterMigration: plan.taskChapterMigration,
-  taskReadingMigration: plan.taskReadingMigration,
-  originalChapterMigration: plan.originalChapterMigration,
-  originalReadingMigration: plan.originalReadingMigration,
+  previousChapterMigration: plan.migration.legacy.previousChapterMigration,
+  previousReadingMigration: plan.migration.legacy.previousReadingMigration,
+  taskChapterMigration: plan.migration.legacy.taskChapterMigration,
+  taskReadingMigration: plan.migration.legacy.taskReadingMigration,
+  originalChapterMigration: plan.migration.legacy.originalChapterMigration,
+  originalReadingMigration: plan.migration.legacy.originalReadingMigration,
 };
 
 const baseKey = 'tryjesus_chronological_plan_progress_v4';
@@ -89,10 +89,10 @@ const migratedJob = migrateOriginalChronologicalProgress({
   last_index: 0,
   updated_at: '2026-09-10T10:00:00.000Z',
 }, maps, limits);
-assert.deepEqual(migratedJob.completed, plan.originalChapterMigration['0']);
+assert.deepEqual(migratedJob.completed, plan.migration.legacy.originalChapterMigration['0']);
 assert.equal(migratedJob.lastIndex, 4, 'Completed legacy Job resumes at the first Job segment with incomplete chapters');
-assert.equal(plan.originalReadingMigration['0'].last, 8);
-assert.equal(plan.originalReadingMigration['0'].resume, 4);
+assert.equal(plan.migration.legacy.originalReadingMigration['0'].last, 8);
+assert.equal(plan.migration.legacy.originalReadingMigration['0'].resume, 4);
 
 const notesBaseKey = 'tryjesus_chronological_notes_v2';
 assert.notEqual(guestNotesKey(notesBaseKey), accountNotesKey(notesBaseKey, 'user-a'));

@@ -124,3 +124,16 @@ export function selectAccountChronologicalProgressWithGuest(
   if (!shouldLinkGuestProgress(accountLocal, remote, guest, pendingLinkUserId, userId)) return account;
   return account ? newerChronologicalProgress(account, guest) : guest;
 }
+
+export type DocumentProgressMaps = {
+  v4Requirements: number[][][];
+  v4ReadingMap: number[];
+};
+
+// The same per-verse requirements used by the website. Empty requirements never qualify.
+export function migrateDocumentChronologicalProgress(data: StoredProgress, maps: DocumentProgressMaps): ChronologicalProgress {
+  const done = new Set(rawCompleted(data));
+  const completed = maps.v4Requirements.flatMap((groups,index) =>
+    groups.length && groups.every(options=>options.some(old=>done.has(old))) ? [index] : []);
+  return {completed,lastIndex:Math.max(0,maps.v4ReadingMap[rawLastIndex(data)]??0),updatedAt:rawUpdatedAt(data)};
+}

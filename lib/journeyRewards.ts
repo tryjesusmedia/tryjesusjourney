@@ -29,7 +29,7 @@ export async function updateJourneyAlias(nextAlias: string) {
 }
 
 export async function getJourneyLeaderboard(): Promise<JourneyLeaderboardEntry[]> {
-  const { data, error } = await supabase.rpc('get_journey_leaderboard');
+  const { data, error } = await supabase.rpc('get_chronbible_doc_leaderboard');
   if (error) throw new Error(rpcErrorMessage(error, 'The Journey leaderboard is unavailable right now.'));
   return normalizeJourneyLeaderboardRows(data);
 }

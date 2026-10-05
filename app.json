@@ -2,7 +2,7 @@
   "expo": {
     "name": "Try Jesus: The Journey",
     "slug": "try-jesus-the-journey",
-    "version": "0.8.1",
+    "version": "0.9.0",
     "orientation": "portrait",
     "scheme": "tryjesusjourney",
     "userInterfaceStyle": "dark",
@@ -17,7 +17,7 @@
     },
     "android": {
       "package": "com.tryjesusmedia.journey",
-      "versionCode": 19,
+      "versionCode": 20,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-padded.png",

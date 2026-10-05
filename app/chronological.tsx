@@ -14,6 +14,7 @@ import {
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EarnedReadingBadges, ReadingBadgeButton, ReadingBadgeProvider } from '@/components/ReadingBadges';
+import { ChronologicalGuide, ReadingGuidance, SectionGuide, SectionReflection } from '@/components/ChronologicalGuide';
 import { JourneyLeaderboardModal } from '@/components/JourneyLeaderboardModal';
 import { Card, Eyebrow, GoldButton, OutlineButton } from '@/components/ui';
 import { colors } from '@/constants/theme';
@@ -61,7 +62,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
   const [syncBusy, setSyncBusy] = useState(false);
   const [taskBusy, setTaskBusy] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeView, setActiveView] = useState<'journey' | 'progress' | 'leaderboard'>('journey');
+  const [activeView, setActiveView] = useState<'journey' | 'guide' | 'progress' | 'leaderboard'>('journey');
   const [expandedSectionId, setExpandedSectionId] = useState<string | null>(chronologicalBiblePlan[0]?.id ?? null);
   const [expandedReadingId, setExpandedReadingId] = useState<string | null>(null);
   const journeyProfile = useJourneyProfile(sessionUserId);
@@ -168,6 +169,18 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
     }
   }
 
+  async function toggleReading(reading: ChronologicalReading) {
+    if (taskBusy!==null) return;
+    const allDone=reading.bibleTasks.every(t=>completedSet.has(t.progressIndex));
+    const next=new Set(progress.completed);
+    for (const task of reading.bibleTasks) { if (allDone) next.delete(task.progressIndex); else next.add(task.progressIndex); }
+    const optimistic={completed:[...next].sort((a,b)=>a-b),lastIndex:reading.index,updatedAt:new Date().toISOString()};
+    setTaskBusy(-1);setProgress(optimistic);
+    try {setProgress(await saveChronologicalProgress(optimistic,sessionUserId));}
+    catch {Alert.alert('Saved on this phone','This change will sync when you are back online.');}
+    finally {setTaskBusy(null);}
+  }
+
   function openChapter(chapterLabel: string) {
     router.push({ pathname: '/bible-reader' as never, params: { reference: chapterLabel } });
   }
@@ -204,11 +217,11 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
       ) : null}
       <View style={styles.fixedTitleRow}><View style={styles.fixedTitleCopy}><Text style={styles.title}>Chronological Bible</Text></View></View>
       <View style={styles.tabs} accessibilityRole="tablist">
-        {(['journey', 'progress', 'leaderboard'] as const).map((tab) => {
+        {(['journey', 'guide', 'progress', 'leaderboard'] as const).map((tab) => {
           const selected = activeView === tab;
           return <Pressable key={tab} accessibilityRole="tab" accessibilityState={{ selected }} style={[styles.tab, selected && styles.tabSelected]} onPress={() => {
             setActiveView(tab);
-          }}><Text style={[styles.tabText, selected && styles.tabTextSelected]}>{tab === 'journey' ? 'Journey' : tab === 'progress' ? 'Progress' : 'Leaderboard'}</Text></Pressable>;
+          }}><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[styles.tabText, selected && styles.tabTextSelected]}>{tab === 'journey' ? 'Journey' : tab === 'guide' ? 'Guide' : tab === 'progress' ? 'Progress' : 'Leaderboard'}</Text></Pressable>;
         })}
       </View>
     </View>
@@ -222,13 +235,14 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
         <GoldButton title={nextChapter ? (progress.completed.length ? 'Resume reading' : 'Start reading') : 'Read Genesis again'} onPress={() => openChapter(nextChapter?.label ?? 'Genesis 1')} />
         <Text style={styles.browseLabel}>Or choose a reading below</Text>
       </View> : null}
+      {activeView === 'guide' ? <ChronologicalGuide/> : null}
       {activeView === 'progress' ? <>
         <View><Eyebrow>YOUR READING PROGRESS</Eyebrow><Text style={styles.viewTitle}>Continue the story</Text></View>
         {!session ? <OutlineButton title="Sign in to save progress" onPress={connectGoogle} /> : null}
         <EarnedReadingBadges completed={completedSet} />
         <View style={styles.statGrid}>{[
-          [String(chronologicalReadings.filter(reading => reading.bibleTasks.every(task => completedSet.has(task.progressIndex))).length), 'Tasks complete'],
-          [String(journeyRewards.completedChapters), 'Chapters complete'],
+          [String(chronologicalReadings.filter(reading => reading.bibleTasks.every(task => completedSet.has(task.progressIndex))).length), 'Readings complete'],
+          [String(journeyRewards.completedChapters), 'Passages complete'],
           [`${percent}%`, 'Journey complete'],
           [journeyRewards.journeyPoints.toLocaleString(), 'Journey Points'],
         ].map(([value, label]) => <View key={label} style={styles.statCard}><Text style={styles.progressNumber}>{value}</Text><Text style={styles.viewDescription}>{label}</Text></View>)}</View>
@@ -268,7 +282,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
             return <Card style={[styles.sectionCard, expanded ? styles.sectionCardOpen : undefined]}><Pressable onPress={() => { setExpandedSectionId(expanded ? null : section.id); setExpandedReadingId(null); }} accessibilityRole="button" accessibilityState={{ expanded }}>
               <View style={styles.sectionTopline}><Text style={styles.sectionNumber}>SECTION {String(section.number).padStart(2, '0')}</Text><Text style={styles.sectionChevron}>{expanded ? '−' : '+'}</Text></View>
               <Text style={styles.sectionTitle}>{section.title}</Text><Text style={styles.sectionMeta}>{section.readings.length} readings · {completeCount} complete</Text><View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${Math.round(completeCount / section.readings.length * 100)}%` }]} /></View><Text style={styles.sectionAction}>{expanded ? 'Hide readings' : 'Show readings'}</Text>
-            </Pressable></Card>;
+            </Pressable>{expanded ? <SectionGuide section={section}/> : null}</Card>;
           }
 
           const { reading } = item;
@@ -277,12 +291,12 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
           return <Card style={isExpanded ? styles.expandedCard : undefined}>
             <View style={styles.readingTitleRow}>
             <Pressable style={styles.readingTitleCopy} onPress={() => setExpandedReadingId(isExpanded ? null : reading.id)}>
-              <View style={styles.readingTopline}><Text style={styles.readingNumber}>READING {reading.number}</Text><Text style={styles.readingCount}>{readingCompleted}/{reading.bibleTasks.length} chapters</Text></View>
+              <View style={styles.readingTopline}><Text style={styles.readingNumber}>READING {reading.number}</Text><Text style={styles.readingCount}>{readingCompleted}/{reading.bibleTasks.length} passages</Text></View>
               <Text style={styles.readingTitle}>{reading.title}</Text><Text style={styles.sectionLabel}>{reading.section}</Text><Text style={styles.expandLabel}>{isExpanded ? 'Hide reading ↑' : 'Open reading ↓'}</Text>
             </Pressable>
             {readingCompleted === reading.bibleTasks.length ? <ReadingBadgeButton reading={reading} /> : null}
             </View>
-            {isExpanded ? <View style={styles.expandedContent}>{reading.bibleTasks.map((task) => {
+            {isExpanded ? <View style={styles.expandedContent}><Text style={styles.viewDescription}>{reading.reference}</Text>{reading.bibleTasks.map((task) => {
               const isComplete = completedSet.has(task.progressIndex);
               return <View key={task.progressIndex} style={styles.chapterBlock}><View style={styles.chapterRow}>
                 <Pressable onPress={() => toggleTask(task.progressIndex, reading.index)} disabled={taskBusy !== null} style={[styles.checkbox, isComplete && styles.checkboxComplete]} accessibilityRole="checkbox" accessibilityState={{ checked: isComplete }}><Text style={styles.checkmark}>{taskBusy === task.progressIndex ? '…' : isComplete ? '✓' : ''}</Text></Pressable>
@@ -296,7 +310,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
                   </Pressable>
                 </View>
               </View></View>;
-            })}</View> : null}
+            })}<Pressable accessibilityRole="checkbox" accessibilityLabel="Reading complete" accessibilityState={{checked:readingCompleted===reading.bibleTasks.length}} disabled={taskBusy!==null} onPress={()=>toggleReading(reading)} style={styles.completeReading}><Text style={styles.checkmark}>{readingCompleted===reading.bibleTasks.length?'☑':'☐'}</Text><Text style={styles.viewDescription}>Reading complete</Text></Pressable><ReadingGuidance paragraphs={reading.guidance}/>{chronologicalBiblePlan.find(s=>s.title===reading.section)?.readings.at(-1)?.id===reading.id ? <SectionReflection section={chronologicalBiblePlan.find(s=>s.title===reading.section)!}/> : null}</View> : null}
           </Card>;
         }}
       /> : <JourneyLeaderboardModal
@@ -322,6 +336,7 @@ export default function ChronologicalBibleScreen() {
 }
 
 const styles = StyleSheet.create({
+  completeReading:{flexDirection:"row",alignItems:"center",gap:12,minHeight:48,marginVertical:12},
   readingPromise: { color: colors.ivory, fontSize: 23, lineHeight: 31, fontWeight: '600', marginBottom: 16 },
   nextChapter: { color: colors.muted, fontSize: 18, lineHeight: 27, marginBottom: 18 },
   browseLabel: { color: colors.muted, fontSize: 15, marginTop: 28, marginBottom: 4 },
@@ -340,7 +355,7 @@ const styles = StyleSheet.create({
   tabs: { flexDirection: 'row', gap: 6 },
   tab: { flex: 1, minHeight: 48, paddingHorizontal: 6, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: 12 },
   tabSelected: { backgroundColor: colors.gold },
-  tabText: { color: colors.gold, fontSize: 15, fontWeight: '700', textAlign: 'center' },
+  tabText: { color: colors.gold, fontSize: 13, fontWeight: '700', textAlign: 'center' },
   tabTextSelected: { color: colors.charcoal },
   separator: { height: 12 },
   sectionCard: { backgroundColor: colors.panel, borderColor: colors.border }, sectionCardOpen: { backgroundColor: colors.plum, borderColor: colors.border }, sectionTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, sectionNumber: { color: colors.gold, fontSize: 10, fontWeight: '900', letterSpacing: 1.5 }, sectionChevron: { color: colors.gold, fontSize: 26, lineHeight: 27, fontWeight: '500' }, sectionTitle: { color: colors.text, fontSize: 19, lineHeight: 25, fontWeight: '900', marginTop: 7 }, sectionMeta: { color: colors.ivory, fontSize: 12, lineHeight: 18, marginTop: 6 }, sectionAction: { color: colors.gold, fontSize: 12, fontWeight: '900', marginTop: 12 },

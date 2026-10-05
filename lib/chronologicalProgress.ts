@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { chronologicalPlanMeta } from '@/data/chronologicalBiblePlan';
+import { chronologicalPlanMeta, chronologicalDocumentMigration } from '@/data/chronologicalBiblePlan';
 import { supabase } from '@/lib/supabase';
 import {
   accountProgressKey,
@@ -7,6 +7,7 @@ import {
   guestProgressKey,
   hasSavedChronologicalProgress,
   migrateOriginalChronologicalProgress,
+  migrateDocumentChronologicalProgress,
   migratePreviousChronologicalProgress,
   migrateTaskChronologicalProgress,
   normalizeChronologicalProgress,
@@ -32,6 +33,7 @@ const UNSCOPED_LOCAL_KEY = localKeyForPlan(CHRONOLOGICAL_PLAN_ID);
 const GUEST_LOCAL_KEY = guestProgressKey(UNSCOPED_LOCAL_KEY);
 const GUEST_MIGRATION_MARKER_KEY = `${GUEST_LOCAL_KEY}:legacy-imported`;
 const GUEST_LINK_TARGET_KEY = `${GUEST_LOCAL_KEY}:link-target`;
+const V4_LOCAL_KEY = localKeyForPlan('chronological-bible-order-v4');
 const PREVIOUS_LOCAL_KEY = localKeyForPlan(chronologicalPlanMeta.previousPlanId);
 const TASK_LEGACY_LOCAL_KEY = localKeyForPlan(chronologicalPlanMeta.taskLegacyPlanId);
 const ORIGINAL_LOCAL_KEY = 'tryjesus_chronological_plan_progress';
@@ -50,20 +52,24 @@ const migrationMaps: ProgressMigrationMaps = {
   originalReadingMigration: chronologicalPlanMeta.originalReadingMigration,
 };
 
+function migrateDocumentProgress(data: StoredProgress) {
+  return migrateDocumentChronologicalProgress(data, chronologicalDocumentMigration);
+}
+
 function normalize(data?: StoredProgress | null): ChronologicalProgress {
   return normalizeChronologicalProgress(data, limits);
 }
 
 function migratePreviousProgress(data: StoredProgress): ChronologicalProgress {
-  return migratePreviousChronologicalProgress(data, migrationMaps, limits);
+  return migrateDocumentProgress(migratePreviousChronologicalProgress(data, migrationMaps, {chapterCount:1205,readingCount:313}));
 }
 
 function migrateTaskProgress(data: StoredProgress): ChronologicalProgress {
-  return migrateTaskChronologicalProgress(data, migrationMaps, limits);
+  return migrateDocumentProgress(migrateTaskChronologicalProgress(data, migrationMaps, {chapterCount:1205,readingCount:313}));
 }
 
 function migrateOriginalProgress(data: StoredProgress): ChronologicalProgress {
-  return migrateOriginalChronologicalProgress(data, migrationMaps, limits);
+  return migrateDocumentProgress(migrateOriginalChronologicalProgress(data, migrationMaps, {chapterCount:1205,readingCount:313}));
 }
 
 async function readStoredProgress(key: string): Promise<StoredProgress | null> {
@@ -78,19 +84,19 @@ async function readGuestProgress(): Promise<ChronologicalProgress> {
   const migrationFinished = await AsyncStorage.getItem(GUEST_MIGRATION_MARKER_KEY);
   if (migrationFinished) return emptyChronologicalProgress();
 
-  const unscoped = await readStoredProgress(UNSCOPED_LOCAL_KEY);
-  const previous = unscoped ? null : await readStoredProgress(PREVIOUS_LOCAL_KEY);
-  const taskLegacy = unscoped || previous ? null : await readStoredProgress(TASK_LEGACY_LOCAL_KEY);
-  const original = unscoped || previous || taskLegacy ? null : await readStoredProgress(ORIGINAL_LOCAL_KEY);
-  const migrated = unscoped
-    ? normalize(unscoped)
-    : previous
-      ? migratePreviousProgress(previous)
-      : taskLegacy
-        ? migrateTaskProgress(taskLegacy)
-        : original
-          ? migrateOriginalProgress(original)
-          : emptyChronologicalProgress();
+  const v4Guest = await readStoredProgress(guestProgressKey(V4_LOCAL_KEY));
+  const v4Imported = await AsyncStorage.getItem(`${guestProgressKey(V4_LOCAL_KEY)}:legacy-imported`);
+  const unscoped = v4Guest || v4Imported ? null : await readStoredProgress(V4_LOCAL_KEY);
+  const previous = v4Guest || v4Imported || unscoped ? null : await readStoredProgress(PREVIOUS_LOCAL_KEY);
+  const taskLegacy = v4Guest || v4Imported || unscoped || previous ? null : await readStoredProgress(TASK_LEGACY_LOCAL_KEY);
+  const original = v4Guest || v4Imported || unscoped || previous || taskLegacy ? null : await readStoredProgress(ORIGINAL_LOCAL_KEY);
+  const migrated = v4Guest ? migrateDocumentProgress(v4Guest)
+    : unscoped ? migrateDocumentProgress(unscoped)
+    : previous ? migratePreviousProgress(previous)
+    : taskLegacy ? migrateTaskProgress(taskLegacy)
+    : original ? migrateOriginalProgress(original) : emptyChronologicalProgress();
+  const detachedTarget = await AsyncStorage.getItem(`${guestProgressKey(V4_LOCAL_KEY)}:link-target`);
+  if (v4Guest && detachedTarget) await AsyncStorage.setItem(GUEST_LINK_TARGET_KEY,detachedTarget);
 
   await AsyncStorage.multiSet([
     [GUEST_LOCAL_KEY, JSON.stringify(migrated)],
@@ -106,6 +112,11 @@ async function writeGuestProgress(progress: ChronologicalProgress) {
 async function readAccountProgress(userId: string): Promise<ChronologicalProgress | null> {
   const stored = await readStoredProgress(accountProgressKey(UNSCOPED_LOCAL_KEY, userId));
   return stored ? normalize(stored) : null;
+}
+
+async function readLegacyAccountProgress(userId: string): Promise<ChronologicalProgress | null> {
+  const old = await readStoredProgress(accountProgressKey(V4_LOCAL_KEY,userId));
+  return old ? migrateDocumentProgress(old) : null;
 }
 
 async function writeAccountProgress(progress: ChronologicalProgress, userId: string) {
@@ -124,11 +135,12 @@ async function finishGuestLink(userId: string) {
 
 export async function loadLocalChronologicalProgress(userId?: string): Promise<ChronologicalProgress> {
   if (!userId) return readGuestProgress();
+  await readGuestProgress(); // Import the previous guest's account-link marker before reading it.
   const [accountLocal, pendingLinkUserId] = await Promise.all([
     readAccountProgress(userId),
     AsyncStorage.getItem(GUEST_LINK_TARGET_KEY),
   ]);
-  if (pendingLinkUserId !== userId) return accountLocal ?? emptyChronologicalProgress();
+  if (pendingLinkUserId !== userId) return accountLocal ?? await readLegacyAccountProgress(userId) ?? emptyChronologicalProgress();
   const guest = await readGuestProgress();
   return selectAccountChronologicalProgressWithGuest(accountLocal, null, guest, pendingLinkUserId, userId)
     ?? emptyChronologicalProgress();
@@ -144,37 +156,24 @@ async function loadRemoteProgress(userId: string): Promise<ChronologicalProgress
   if (current.error) throw current.error;
   if (current.data) return normalize(current.data);
 
-  const previous = await supabase
-    .from('reading_plan_progress')
-    .select('completed_indices,last_index,updated_at')
-    .eq('user_id', userId)
-    .eq('plan_id', chronologicalPlanMeta.previousPlanId)
-    .maybeSingle();
-  if (previous.error) throw previous.error;
-  if (previous.data) return migratePreviousProgress(previous.data);
-
-  const taskLegacy = await supabase
-    .from('reading_plan_progress')
-    .select('completed_indices,last_index,updated_at')
-    .eq('user_id', userId)
-    .eq('plan_id', chronologicalPlanMeta.taskLegacyPlanId)
-    .maybeSingle();
-  if (taskLegacy.error) throw taskLegacy.error;
-  if (taskLegacy.data) return migrateTaskProgress(taskLegacy.data);
-
-  const original = await supabase
-    .from('reading_plan_progress')
-    .select('completed_indices,last_index,updated_at')
-    .eq('user_id', userId)
-    .eq('plan_id', chronologicalPlanMeta.originalLegacyPlanId)
-    .maybeSingle();
-  if (original.error) throw original.error;
-  return original.data ? migrateOriginalProgress(original.data) : null;
+  const accountLegacy = await readLegacyAccountProgress(userId);
+  for (const [id,migrate] of [
+    ['chronological-bible-order-v4',migrateDocumentProgress],
+    [chronologicalPlanMeta.previousPlanId,migratePreviousProgress],
+    [chronologicalPlanMeta.taskLegacyPlanId,migrateTaskProgress],
+    [chronologicalPlanMeta.originalLegacyPlanId,migrateOriginalProgress],
+  ] as const) {
+    const old = await supabase.from('reading_plan_progress').select('completed_indices,last_index,updated_at').eq('user_id',userId).eq('plan_id',id).maybeSingle();
+    if (old.error) throw old.error;
+    if (old.data) return selectAccountChronologicalProgress(accountLegacy,migrate(old.data));
+  }
+  return accountLegacy;
 }
 
 export async function loadChronologicalProgress(userId?: string): Promise<ChronologicalProgress> {
   if (!userId) return readGuestProgress();
 
+  await readGuestProgress();
   const accountLocal = await readAccountProgress(userId);
   const remote = await loadRemoteProgress(userId);
   const pendingLinkUserId = await AsyncStorage.getItem(GUEST_LINK_TARGET_KEY);

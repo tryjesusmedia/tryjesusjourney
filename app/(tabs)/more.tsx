@@ -79,6 +79,7 @@ export default function MoreScreen() {
   }
 
   const perks = [
+    { title: 'Members page', description: 'Open your Try Jesus Media resources and community.', action: () => openLink('https://tryjesusmedia.com/welcome/') },
     { title: 'Bible guides', description: 'Explore questions about Jesus and Bible prophecy.', action: () => router.push('/(tabs)/journey') },
     { title: 'Weekly Zoom discussion', description: 'Thursdays at 8 PM Eastern. Join or set a reminder.', action: () => router.push('/(tabs)/live') },
     { title: 'WhatsApp family', description: 'Ask questions and stay connected during the week.', action: () => openLink(WHATSAPP_GROUP_URL) },
@@ -105,7 +106,6 @@ export default function MoreScreen() {
     {accountOpen ? <Card style={styles.accountCard}>
       <OutlineButton title="Email Try Jesus Media" onPress={() => openLink('mailto:info@tryjesusmedia.com')} />
       <OutlineButton title="Privacy policy" onPress={() => openLink(PRIVACY_URL)} />
-      <OutlineButton title="Members page" onPress={() => openLink('https://tryjesusmedia.com/welcome/')} />
       {session ? <><Text style={styles.deletionNote}>Delete your online sync account and its data. A copy of your ChronBible progress will stay on this phone.</Text><OutlineButton title={deleting ? 'Saving copy and deleting…' : 'Delete sync account and online data'} disabled={deleting} onPress={confirmDeletion} /></> : null}
       <Text accessibilityRole="link" onPress={() => openLink(ACCOUNT_DELETION_URL)} style={styles.deletionHelp}>Account deletion help</Text>
     </Card> : null}
