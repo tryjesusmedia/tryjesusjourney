@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: conflict-upload-only-11-layout-qa
+  group: conflict-upload-only-11-verified-layout
   cancel-in-progress: false
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: tryjesusmedia/bibleandconflict
-          ref: 325c8be0e936162eed1f6628be38d69cefcc8864
+          ref: 4374a07ec2afce7c96f319446728f20f96b90c54
       - uses: actions/setup-node@v4
         with:
           node-version: 22
