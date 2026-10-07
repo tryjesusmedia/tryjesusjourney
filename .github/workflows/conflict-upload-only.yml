@@ -1,0 +1,56 @@
+name: Bible and Conflict Upload-Only Bundle
+
+on:
+  push:
+    branches: [build/conflict-upload-only-1.0.10]
+    paths:
+      - .github/workflows/conflict-upload-only.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: conflict-upload-only-11
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Check out only the standalone Bible and Conflict source
+        uses: actions/checkout@v4
+        with:
+          repository: tryjesusmedia/bibleandconflict
+          ref: 2c3c73b55006b28cda5b8cc6424c107a08e78b4d
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:auth-callback
+      - run: npm run test:account-isolation
+      - name: Connect to existing Android signing credentials
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: 24.7.0
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Build signed Android upload file only
+        run: eas build --platform android --profile production --local --non-interactive --freeze-credentials --output bible-and-conflict-1.0.10-build-11.aab
+      - name: Verify signed bundle
+        run: jarsigner -verify bible-and-conflict-1.0.10-build-11.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bible-and-conflict-1.0.10-build-11
+          path: bible-and-conflict-1.0.10-build-11.aab
+          if-no-files-found: error
+          retention-days: 30
+# Intentionally no publishing or Google Play submission steps.
