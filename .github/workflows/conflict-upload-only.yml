@@ -2,7 +2,7 @@ name: Bible and Conflict Upload-Only Bundle
 
 on:
   push:
-    branches: [build/conflict-upload-only-1.0.10]
+    branches: [build/conflict-google-return-1.0.11]
     paths:
       - .github/workflows/conflict-upload-only.yml
   workflow_dispatch:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: conflict-upload-only-11-verified-layout
+  group: conflict-upload-only-12-google-return
   cancel-in-progress: false
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: tryjesusmedia/bibleandconflict
-          ref: 4374a07ec2afce7c96f319446728f20f96b90c54
+          ref: 48b103c8e5e2931df38fbd416b3238450d3b474c
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -44,13 +44,13 @@ jobs:
           eas-version: 24.7.0
           token: ${{ secrets.EXPO_TOKEN }}
       - name: Build signed Android upload file only
-        run: eas build --platform android --profile production --local --non-interactive --freeze-credentials --output bible-and-conflict-1.0.10-build-11.aab
+        run: eas build --platform android --profile production --local --non-interactive --freeze-credentials --output bible-and-conflict-1.0.11-build-12.aab
       - name: Verify signed bundle
-        run: jarsigner -verify bible-and-conflict-1.0.10-build-11.aab
+        run: jarsigner -verify bible-and-conflict-1.0.11-build-12.aab
       - uses: actions/upload-artifact@v4
         with:
-          name: bible-and-conflict-1.0.10-build-11
-          path: bible-and-conflict-1.0.10-build-11.aab
+          name: bible-and-conflict-1.0.11-build-12
+          path: bible-and-conflict-1.0.11-build-12.aab
           if-no-files-found: error
           retention-days: 30
 # Intentionally no publishing or Google Play submission steps.
