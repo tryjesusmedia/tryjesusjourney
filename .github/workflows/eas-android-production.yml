@@ -52,6 +52,7 @@ jobs:
 
       - name: Validate the document edition and existing reader behavior
         run: |
+          node --experimental-strip-types scripts/test-chronological-navigation.mjs
           node scripts/test-document-plan.mjs
           node scripts/test-document-progress.cjs
           npm run test:chronological-state
