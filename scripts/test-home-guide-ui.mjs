@@ -29,6 +29,11 @@ assert.doesNotMatch(tabs, /event.preventDefault|Linking.openURL/);
 assert.match(bibleTab, /<ChronologicalBibleContent showBackButton=\{false\} \/>/);
 assert.match(bibleDecoded, /Explore Bible Decoded/);
 assert.match(bibleDecoded, /Linking.openURL\(BIBLE_DECODED_URL\)/);
+assert.match(bibleDecoded, /setPromoWidth\(nativeEvent\.layout\.width\)/, 'Measure the available content width on the native layout');
+assert.match(bibleDecoded, /width: promoWidth, height: promoWidth \* 941 \/ 1672/, 'Override both Android intrinsic image dimensions to preserve the complete graphic');
+assert.match(bibleDecoded, /resizeMode="contain"/);
+assert.ok(bibleDecoded.indexOf('Bible Decoded</Text>') < bibleDecoded.indexOf('<View style={styles.promoFrame}'));
+assert.doesNotMatch(bibleDecoded, /promoImage: \{ width: '100%', aspectRatio:/, 'Percentage width alone leaves Android intrinsic sizing active');
 assert.doesNotMatch(bibleDecoded, /\$227|\$97|next 100/);
 for (const route of ['journey', 'ask', 'live', 'videos', 'journal']) {
   assert.ok(tabs.includes(`name="${route}" options={detailOptions(`));

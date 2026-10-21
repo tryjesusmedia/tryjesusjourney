@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - fix/bible-decoded-image-fit-build23
     paths:
       - .github/workflows/eas-android-production.yml
       - .github/eas-build-trigger
@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: android-production-build
+  group: android-image-fit-build23
   cancel-in-progress: false
 
 jobs:
@@ -58,6 +58,7 @@ jobs:
           npm run test:chronological-state
           npm run test:bible-reader
           npm run test:journey-rewards
+          npm run test:home-guide-ui
 
       - name: Set up Expo and EAS
         uses: expo/expo-github-action@v8
@@ -69,12 +70,48 @@ jobs:
         run: eas whoami
 
       - name: Build production Android App Bundle
-        run: eas build --platform android --profile production --local --non-interactive --output try-jesus-the-journey.aab
+        run: eas build --platform android --profile production --local --non-interactive --freeze-credentials --output try-jesus-the-journey.aab
+
+      - name: Verify signed App Bundle
+        run: jarsigner -verify try-jesus-the-journey.aab
 
       - name: Upload App Bundle
         uses: actions/upload-artifact@v4
         with:
-          name: try-jesus-the-journey-android-aab
+          name: try-jesus-the-journey-build23-aab
           path: try-jesus-the-journey.aab
           if-no-files-found: error
           retention-days: 14
+
+      - name: Prepare an emulator-only install from the release bundle
+        run: |
+          curl --fail --silent --show-error --location https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar --output "$RUNNER_TEMP/bundletool.jar"
+          java -jar "$RUNNER_TEMP/bundletool.jar" validate --bundle try-jesus-the-journey.aab > /dev/null
+          keytool -genkeypair -keystore "$RUNNER_TEMP/emulator-only.keystore" -alias androiddebugkey -storepass android -keypass android -dname "CN=Ephemeral Layout Test" -keyalg RSA -validity 2
+          java -jar "$RUNNER_TEMP/bundletool.jar" build-apks --bundle try-jesus-the-journey.aab --output "$RUNNER_TEMP/layout-test.apks" --mode universal --ks "$RUNNER_TEMP/emulator-only.keystore" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android
+          unzip -p "$RUNNER_TEMP/layout-test.apks" universal.apk > universal.apk
+
+      - name: Enable the ephemeral emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Check the real Android layout at normal and narrow phone widths
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          disable-animations: true
+          script: python3 scripts/test-decoded-android.py
+
+      - name: Retain internal Android layout evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: internal-android-layout-build23
+          path: android-layout-report
+          if-no-files-found: ignore
+          retention-days: 7
