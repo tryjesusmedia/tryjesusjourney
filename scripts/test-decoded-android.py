@@ -16,8 +16,11 @@ def adb(*args):
 
 
 def nodes():
-    adb("shell", "uiautomator", "dump", "/sdcard/decoded-layout.xml")
-    return list(ET.fromstring(adb("exec-out", "cat", "/sdcard/decoded-layout.xml")).iter("node"))
+    try:
+        adb("shell", "uiautomator", "dump", "/sdcard/decoded-layout.xml")
+        return list(ET.fromstring(adb("exec-out", "cat", "/sdcard/decoded-layout.xml")).iter("node"))
+    except (ET.ParseError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return []  # System UI can briefly have no accessibility root after resizing.
 
 
 def bounds(node):
@@ -41,7 +44,8 @@ for width, scale in [(390, "1.0"), (320, "1.0"), (390, "1.3")]:
     adb("shell", "wm", "density", "320")
     adb("shell", "settings", "put", "system", "font_scale", scale)
     adb("shell", "am", "force-stop", PACKAGE)
-    adb("shell", "am", "start", "-n", f"{PACKAGE}/.MainActivity")
+    print(adb("shell", "am", "start", "-n", f"{PACKAGE}/.MainActivity").decode(), flush=True)
+    time.sleep(5)
     image = None
     for attempt in range(15):
         time.sleep(1)
@@ -57,7 +61,8 @@ for width, scale in [(390, "1.0"), (320, "1.0"), (390, "1.3")]:
         if tab is not None:
             tap(tab)
     (REPORTS / f"{name}.png").write_bytes(adb("exec-out", "screencap", "-p"))
-    (REPORTS / f"{name}.xml").write_bytes(adb("exec-out", "cat", "/sdcard/decoded-layout.xml"))
+    if current:
+        (REPORTS / f"{name}.xml").write_bytes(adb("exec-out", "cat", "/sdcard/decoded-layout.xml"))
     assert image is not None, f"Bible Decoded graphic did not appear at {width}dp"
     left, top, right, bottom = bounds(image)
     actual_width, actual_height = right - left, bottom - top
