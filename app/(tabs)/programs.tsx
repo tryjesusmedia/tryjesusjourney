@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Eyebrow, GoldButton } from '@/components/ui';
 import { colors } from '@/constants/theme';
@@ -15,6 +15,7 @@ export default function BibleDecodedScreen() {
     <ScrollView style={styles.page} contentContainerStyle={[styles.content, { paddingTop: insets.top + 28 }]}>
       <Eyebrow>UNDERSTAND WHAT YOU READ</Eyebrow>
       <Text style={styles.title}>Bible Decoded</Text>
+      <Image source={require('@/assets/bible-decoded-promo.png')} style={styles.promoImage} resizeMode="contain" accessibilityLabel="Bible Decoded: six-part video series. Understand the Bible for yourself." />
       <Text style={styles.lead}>Open your Bible.{ '\n' }Discover more.</Text>
       <Text style={styles.body}>Learn simple ways to understand Scripture with six guided lessons from Pastor Kal—the real human.</Text>
       <GoldButton title="Explore Bible Decoded" onPress={openProgram} />
@@ -30,6 +31,7 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.charcoal },
   content: { padding: 24, paddingBottom: 36 },
   title: { color: colors.gold, fontSize: 20, fontWeight: '700', marginBottom: 28 },
+  promoImage: { width: '100%', aspectRatio: 1672 / 941, marginBottom: 28 },
   lead: { color: colors.text, fontSize: 36, lineHeight: 43, fontWeight: '800', marginBottom: 20 },
   body: { color: colors.ivory, fontSize: 19, lineHeight: 29, marginBottom: 28 },
   note: { color: colors.muted, fontSize: 15, lineHeight: 23, marginTop: 14 },
