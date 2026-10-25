@@ -4,7 +4,7 @@ Status: code prepared; provider configuration and real-device verification still
 
 ## Existing account contract
 
-Use the existing Journey project `erejehmrtzjpqurbftsm` and `chronological-bible-doc-v5`. No progress IDs, indices, ownership policies, or account rows change. Android versionCode remains 23. Intended next iOS build: 0.9.1 (8), subject to checking the current EAS build history.
+Use the existing Journey project `erejehmrtzjpqurbftsm` and `chronological-bible-doc-v5`. No progress IDs, indices, ownership policies, or account rows change. Requested Android update: version 0.9.1, versionCode 24; build only, without Google Play submission. Intended next iOS build: 0.9.1 (8), subject to checking the current EAS build history.
 
 ## Configuration required before a signed release
 
@@ -12,7 +12,7 @@ Use the existing Journey project `erejehmrtzjpqurbftsm` and `chronological-bible
 2. Website/Android Apple OAuth: register a Services ID, suggested `com.tryjesusmedia.journey.web`, linked to this primary App ID. Register `tryjesusmedia.com` and return URL `https://erejehmrtzjpqurbftsm.supabase.co/auth/v1/callback`. Create the Sign in with Apple key and configure the Apple provider in Supabase. Keep the private key and generated client secret out of source control, pull requests, build artifacts, and chat.
 3. Supabase Apple provider: enable it; configure the Services ID, native bundle ID as accepted client IDs, and valid Apple client secret. Per current Supabase guidance, the Services ID must precede the native App ID in the accepted-ID list. Keep nonce validation enabled. OAuth client secrets expire within six months; set up rotation before launch. Configure Apple's private email relay for any sender used for account emails.
 4. Enable manual identity linking in Supabase. Existing users should sign in with their current method, then open Account & help > Manage sign-in methods to connect Apple/Google. This preserves the user ID when Apple supplies a different relay address. Do not merge accounts by matching names or unverified emails. If an identity already belongs to another account, report failure; do not move progress automatically.
-5. Email provider is already enabled and email confirmation required (verified through public `/auth/v1/settings`). Confirm production SMTP, authorized sender and delivery. Keep confirmation enabled. Configure a password minimum consistent with the UI's 12-character minimum and existing users' passwords.
+5. Email provider is already enabled and email confirmation required (verified through public `/auth/v1/settings`). Confirm production SMTP, authorized sender and delivery. Keep confirmation enabled. Configure a password minimum consistent with the UI's 6-character minimum and existing users' passwords.
 6. Preserve existing redirect URLs and add exact redirects:
    - `tryjesusjourney://auth/callback`
    - `tryjesusjourney://auth/callback?next=recovery`
@@ -31,3 +31,7 @@ The iOS workflow builds and verifies an App Store IPA; it does not upload or sub
 ## Checks completed locally
 
 Typecheck, lint, authentication method tests, callback/recovery tests, document plan/progress, chronological state, reader and reward checks. Expo iOS JavaScript export and generated Apple entitlement verified. Website authentication forms tested with a DOM and a mocked Supabase client. These checks do not replace live provider, SMTP, physical-device, or signed-IPA verification.
+
+## Configuration verified on 2026-10-25
+
+The owner enabled Apple and email alongside Google, configured exact website and native callback/recovery URLs and manual linking, tested Google Workspace SMTP delivery, and registered the sender with Apple (SPF passed). Website preview screenshots confirm Apple and Google on the same existing account and a successful password save. Fresh Android sign-in, email confirmation/reset links, progress, and account deletion still require device testing before publishing. Apple provisioning and iPhone verification remain separate pending work.
