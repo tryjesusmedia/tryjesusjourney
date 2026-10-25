@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feat/apple-email-signin
     paths:
       - .github/workflows/eas-android-production.yml
       - .github/eas-build-trigger
@@ -47,8 +48,10 @@ jobs:
       - name: Lint app
         run: npm run lint
 
-      - name: Test sign-in callback handling
-        run: npm run test:auth-callback
+      - name: Test sign-in methods and callbacks
+        run: |
+          npm run test:auth-callback
+          npm run test:auth-methods
 
       - name: Validate the document edition and existing reader behavior
         run: |
@@ -69,12 +72,39 @@ jobs:
         run: eas whoami
 
       - name: Build production Android App Bundle
-        run: eas build --platform android --profile production --local --non-interactive --output try-jesus-the-journey.aab
+        run: eas build --platform android --profile production --local --non-interactive --freeze-credentials --output Try-Jesus-Journey-v0.9.1-build24.aab
+
+      - name: Verify signed bundle and version
+        run: |
+          curl --fail --location --silent --show-error https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar -o /tmp/bundletool.jar
+          java -jar /tmp/bundletool.jar validate --bundle Try-Jesus-Journey-v0.9.1-build24.aab
+          java -jar /tmp/bundletool.jar dump manifest --bundle Try-Jesus-Journey-v0.9.1-build24.aab --module base > /tmp/android-manifest.xml
+          jarsigner -verify Try-Jesus-Journey-v0.9.1-build24.aab
+          python3 - <<'PYVERIFY'
+          import json, os, pathlib, xml.etree.ElementTree as ET, zipfile, hashlib
+          path=pathlib.Path('Try-Jesus-Journey-v0.9.1-build24.aab')
+          root=ET.parse('/tmp/android-manifest.xml').getroot()
+          android='{http://schemas.android.com/apk/res/android}'
+          assert root.attrib['package']=='com.tryjesusmedia.journey'
+          assert root.attrib[android+'versionCode']=='24'
+          assert root.attrib[android+'versionName']=='0.9.1'
+          with zipfile.ZipFile(path) as archive:
+              names=archive.namelist()
+              assert any(n.startswith('META-INF/') and n.endswith(('.RSA','.EC','.DSA')) for n in names), 'Missing bundle signature'
+              script=archive.read('base/assets/index.android.bundle')
+              assert b'chronological-bible-doc-v5' in script
+              assert b'get_chronbible_doc_leaderboard' in script
+          result={'package':'com.tryjesusmedia.journey','version':'0.9.1','versionCode':24,'sourceCommit':os.environ['GITHUB_SHA'],'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'bundleValidated':True,'signatureVerified':True}
+          pathlib.Path('android-build-verification.json').write_text(json.dumps(result,indent=2)+'\n')
+          print(json.dumps(result,indent=2))
+          PYVERIFY
 
       - name: Upload App Bundle
         uses: actions/upload-artifact@v4
         with:
           name: try-jesus-the-journey-android-aab
-          path: try-jesus-the-journey.aab
+          path: |
+            Try-Jesus-Journey-v0.9.1-build24.aab
+            android-build-verification.json
           if-no-files-found: error
           retention-days: 14
