@@ -2,6 +2,11 @@ name: Apple Production Build
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/eas-ios-production.yml
+      - .github/eas-ios-build-trigger
   push:
     branches: [main]
     paths:
@@ -12,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ios-production-build
+  group: ios-production-build-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
