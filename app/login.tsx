@@ -41,8 +41,8 @@ export default function LoginScreen() {
     if (busy) return;
     setError(''); setMessage('');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('Please enter your email address.'); return; }
-    if (mode !== 'reset' && password.length < (mode === 'signup' ? 12 : 1)) {
-      setError(mode === 'signup' ? 'Choose a password with at least 12 characters.' : 'Please enter your password.'); return;
+    if (mode !== 'reset' && password.length < (mode === 'signup' ? 6 : 1)) {
+      setError(mode === 'signup' ? 'Choose a password with at least 6 characters.' : 'Please enter your password.'); return;
     }
     setBusy(true);
     try {
@@ -72,7 +72,7 @@ export default function LoginScreen() {
         <Text style={styles.heading}>{mode === 'signup' ? 'Create an email account' : mode === 'reset' ? 'Reset your password' : 'Sign in with email'}</Text>
         <Text style={styles.label}>Email address</Text>
         <TextInput style={styles.input} accessibilityLabel="Email address" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" textContentType="emailAddress" editable={!busy} />
-        {mode !== 'reset' ? <><Text style={styles.label}>Password</Text><TextInput style={styles.input} accessibilityLabel="Password" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} textContentType={mode === 'signup' ? 'newPassword' : 'password'} editable={!busy} />{mode === 'signup' ? <Text style={styles.body}>Use at least 12 characters.</Text> : null}</> : null}
+        {mode !== 'reset' ? <><Text style={styles.label}>Password</Text><TextInput style={styles.input} accessibilityLabel="Password" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} textContentType={mode === 'signup' ? 'newPassword' : 'password'} editable={!busy} />{mode === 'signup' ? <Text style={styles.body}>Use at least 6 characters.</Text> : null}</> : null}
         <GoldButton title={mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Send reset link' : 'Sign in'} loading={busy} onPress={() => { void submit(); }} />
         <OutlineButton title={mode === 'signin' ? 'Create an email account' : 'Back to email sign-in'} disabled={busy} onPress={() => changeMode(mode === 'signin' ? 'signup' : 'signin')} />
         {mode === 'signin' ? <OutlineButton title="Forgot password?" disabled={busy} onPress={() => changeMode('reset')} /> : null}
