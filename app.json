@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.tryjesusmedia.journey",
-      "versionCode": 23,
+      "versionCode": 24,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon-padded.png",
