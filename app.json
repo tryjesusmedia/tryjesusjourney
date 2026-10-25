@@ -10,10 +10,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.tryjesusmedia.journey",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "config": {
         "usesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.tryjesusmedia.journey",
@@ -53,7 +54,8 @@
           "backgroundColor": "#171418"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true

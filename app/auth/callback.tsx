@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useURL } from 'expo-linking';
 import { completeAuthCallback, oauthRedirectUri } from '@/lib/auth';
+import { authCallbackDestination } from '@/lib/authCallback';
 import { GoldButton } from '@/components/ui';
 import { colors } from '@/constants/theme';
 
@@ -11,14 +12,15 @@ export default function AuthCallback() {
   const incomingUrl = useURL();
   const [error, setError] = useState('');
   const query = new URLSearchParams();
-  for (const key of ['code', 'sb_flow_id', 'error', 'error_description', 'access_token', 'refresh_token']) {
+  for (const key of ['code', 'sb_flow_id', 'error', 'error_description', 'access_token', 'refresh_token', 'next', 'type']) {
     const value = params[key];
     if (typeof value === 'string') query.set(key, value);
   }
   // Router parameters cover PKCE and query tokens, including cold launches.
   // Preserve the incoming fragment for providers returning implicit tokens.
   const callbackQuery = query.toString();
-  const callbackUrl = callbackQuery ? `${oauthRedirectUri}?${callbackQuery}` : incomingUrl;
+  const incomingFragment = incomingUrl ? new URL(incomingUrl).hash : '';
+  const callbackUrl = callbackQuery ? `${oauthRedirectUri}?${callbackQuery}${incomingFragment}` : incomingUrl;
 
   useEffect(() => {
     let mounted = true;
@@ -26,7 +28,7 @@ export default function AuthCallback() {
       if (!mounted) return;
       // OAuth may arrive in a new task or over another callback screen.
       // Always leave the callback for a real reading route, never browser history.
-      router.replace('/(tabs)/bible');
+      router.replace(authCallbackDestination(callbackUrl ?? oauthRedirectUri));
     }).catch(() => {
       if (mounted) setError('We could not finish signing you in. Please return to the app and try again.');
     });

@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
-const { createAuthCallbackHandler } = await import(new URL('../lib/authCallback.ts', import.meta.url));
+const { createAuthCallbackHandler, authCallbackDestination } = await import(new URL('../lib/authCallback.ts', import.meta.url));
 const calls=[];
 let session = null;
 const auth = {
@@ -37,8 +37,13 @@ console.log('Callback tests passed: concurrent and late delivery, account switch
 const callbackScreen = await readFile(new URL('../app/auth/callback.tsx', import.meta.url), 'utf8');
 const readingScreen = await readFile(new URL('../app/chronological.tsx', import.meta.url), 'utf8');
 assert.doesNotMatch(callbackScreen, /router\.(back|canGoBack)\(/);
-assert.match(callbackScreen, /if \(!mounted\) return;[\s\S]*?router\.replace\('\/\(tabs\)\/bible'\)/);
-assert.match(readingScreen, /await signInGoogle\(\);\s*if \(!completed\) return;[\s\S]*?router\.replace\('\/\(tabs\)\/bible'\)/);
+assert.match(callbackScreen, /router\.replace\(authCallbackDestination\(callbackUrl/);
+assert.match(readingScreen, /router\.push\('\/login'\)/);
 assert.doesNotMatch(readingScreen, /Alert\.alert\('Google connected'/);
 assert.match(callbackScreen, /onPress=\{\(\) => router\.replace\('\/\(tabs\)\/bible'\)\}/);
 console.log('Sign-in return checks passed: browser result, late callback, and recovery all target the Bible tab without history pops or a success alert.');
+
+assert.equal(authCallbackDestination('tryjesusjourney://auth/callback?code=ok'), '/(tabs)/bible');
+assert.equal(authCallbackDestination('tryjesusjourney://auth/callback?next=recovery&code=ok'), '/auth/password');
+assert.equal(authCallbackDestination('tryjesusjourney://auth/callback#type=recovery&access_token=x'), '/auth/password');
+console.log('Password recovery routes to password entry; ordinary OAuth routes to reading.');

@@ -51,7 +51,7 @@ type ChronologicalBibleContentProps = {
 export function ChronologicalBibleContent({ showBackButton = true }: ChronologicalBibleContentProps) {
   const insets = useSafeAreaInsets();
   const loadGenerationRef = useRef(0);
-  const { session, loading: authLoading, signInGoogle, signOut } = useAuth();
+  const { session, loading: authLoading, signOut } = useAuth();
   const sessionUserId = session?.user.id;
   const authIdentity = chronologicalLoadIdentity(sessionUserId);
   const [progress, setProgress] = useState<ChronologicalProgress>(emptyProgress);
@@ -145,31 +145,19 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
     openChapter(task.label);
   }
 
-  async function connectGoogle() {
-    if (syncBusy) return;
+  async function connectAccount() {
     setMenuOpen(false);
-    setSyncBusy(true);
-    try {
-      const completed = await signInGoogle();
-      if (!completed) return;
-      // The browser can finish before the callback route mounts. Both delivery
-      // paths target the same reading screen, without a blocking success alert.
-      router.replace('/(tabs)/bible');
-    } catch (caught) {
-      Alert.alert('Google sign-in did not finish', caught instanceof Error ? caught.message : 'Please try again.');
-    } finally {
-      setSyncBusy(false);
-    }
+    router.push('/login');
   }
 
-  async function disconnectGoogle() {
+  async function disconnectAccount() {
     if (!sessionUserId || syncBusy) return;
     setMenuOpen(false);
     setSyncBusy(true);
     try {
       await prepareChronologicalDetach(sessionUserId);
       await signOut();
-      Alert.alert('Google disconnected', 'Your Chron Bible progress is available on this phone. Changes will sync if you reconnect this Google account.');
+      Alert.alert('Signed out', 'Your Chron Bible progress is available on this phone. Changes will sync if you sign in to this account again.');
     } catch (caught) {
       Alert.alert('Could not disconnect safely', caught instanceof Error ? caught.message : 'Your on-phone Chron Bible copy could not be prepared. Please try again.');
     } finally {
@@ -241,8 +229,8 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
           <Eyebrow>CHRON BIBLE SYNC</Eyebrow>
           {session ? <Text style={styles.menuText}>{session.user.email ?? 'Signed in'}</Text> : null}
           {session
-            ? <OutlineButton title={syncBusy ? 'Preparing on-phone copy…' : 'Sign Out of Google Sync'} disabled={syncBusy} onPress={disconnectGoogle} />
-            : <GoldButton title="Sign In to Sync" loading={syncBusy || authLoading} onPress={connectGoogle} />}
+            ? <OutlineButton title={syncBusy ? 'Preparing on-phone copy…' : 'Sign out of sync'} disabled={syncBusy} onPress={disconnectAccount} />
+            : <GoldButton title="Sign In to Sync" loading={syncBusy || authLoading} onPress={connectAccount} />}
         </View>
       ) : null}
       <View style={styles.fixedTitleRow}><View style={styles.fixedTitleCopy}><Text style={styles.title}>Chronological Bible</Text></View></View>
@@ -271,7 +259,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
       </View> : null}
       {activeView === 'progress' ? <>
         <View><Eyebrow>YOUR READING PROGRESS</Eyebrow><Text style={styles.viewTitle}>Continue the story</Text></View>
-        {!session ? <OutlineButton title="Sign in to save progress" onPress={connectGoogle} /> : null}
+        {!session ? <OutlineButton title="Sign in to save progress" onPress={connectAccount} /> : null}
         <EarnedReadingBadges completed={completedSet} />
         <View style={styles.statGrid}>{[
           [String(chronologicalReadings.filter(reading => reading.bibleTasks.every(task => completedSet.has(task.progressIndex))).length), 'Readings complete'],
@@ -355,7 +343,7 @@ export function ChronologicalBibleContent({ showBackButton = true }: Chronologic
         aliasSaving={journeyProfile.saving}
         signInBusy={syncBusy || authLoading}
         onRequestClose={() => setActiveView('journey')}
-        onSignIn={connectGoogle}
+        onSignIn={connectAccount}
         onSaveAlias={journeyProfile.saveAlias}
       />}
     </KeyboardAvoidingView>
