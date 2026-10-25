@@ -17,12 +17,14 @@
     "test:guide-reader-ui": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-guide-reader-ui.mjs",
     "test:bible-reader": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-bible-reader.mjs",
     "test:journey-rewards": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-journey-rewards.mjs",
-    "test:auth-callback": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-auth-callback.mjs"
+    "test:auth-callback": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types scripts/test-auth-callback.mjs",
+    "test:auth-methods": "node scripts/test-auth-methods.cjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.112.3",
     "expo": "~57.0.21",
+    "expo-apple-authentication": "57.0.2",
     "expo-auth-session": "~57.0.12",
     "expo-constants": "~57.0.8",
     "expo-crypto": "~57.0.3",

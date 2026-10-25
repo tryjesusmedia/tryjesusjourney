@@ -150,7 +150,7 @@ export function JourneyLeaderboardModal({
       {!signedIn && (!inline || leaderboardOpen) ? (
         <View style={styles.joinCard}>
           <Text style={styles.joinTitle}>Join with a public leaderboard name</Text>
-          <GoldButton title="Sign In with Google to Join" loading={signInBusy} onPress={() => { void onSignIn(); }} />
+          <GoldButton title="Sign in to join" loading={signInBusy} onPress={() => { void onSignIn(); }} />
         </View>
       ) : null}
 

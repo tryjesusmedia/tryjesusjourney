@@ -96,7 +96,7 @@ assert.match(profileHook, /setError\(true\)/u, 'Profile failures must stay conta
 
 assert.match(leaderboardModal, /if \(!visible \|\| !signedIn\)[^]*return;/u, 'A guest must never trigger the authenticated leaderboard RPC');
 assert.match(leaderboardModal, /data=\{signedIn && \(!inline \|\| leaderboardOpen\) \? entries : \[\]\}/u);
-assert.match(leaderboardModal, /Sign In with Google to Join/u);
+assert.match(leaderboardModal, /Sign in to join/u);
 assert.match(leaderboardModal, /onPress=\{\(\) => openAliasEditor\(publicName/u);
 assert.match(leaderboardModal, />Change name</u);
 assert.doesNotMatch(leaderboardModal, />Change alias</u);
