@@ -45,7 +45,7 @@ jobs:
           npm run test:auth-methods
       - uses: expo/expo-github-action@v8
         with:
-          eas-version: latest
+          eas-version: 25.3.0
           token: ${{ secrets.EXPO_TOKEN }}
       - name: Check Apple build number
         run: |
@@ -57,6 +57,9 @@ jobs:
           console.log(builds.map(b => ({id: b.id, version: b.appVersion, build: b.appBuildVersion, status: b.status})));
           if (builds.some(b => Number(b.appBuildVersion) >= Number(config.ios.buildNumber))) throw new Error('Apple build number must exceed existing EAS builds.');
           NODE
+      - name: Refresh invalid profile using the existing certificate
+        run: |
+          JOURNEY_EAS_CLI_ROOT="$(dirname "$(dirname "$(readlink -f "$(command -v eas)")")")" node scripts/refresh-ios-provisioning.cjs
       - name: Start signed Apple build using existing credentials
         run: eas build --platform ios --profile production --non-interactive --freeze-credentials --no-wait --json > /tmp/ios-build.json
       - name: Record build ID
