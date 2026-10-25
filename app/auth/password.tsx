@@ -17,7 +17,7 @@ export default function PasswordScreen() {
   const [saved, setSaved] = useState(false);
   async function submit() {
     if (!session || busy || saved) return;
-    if (password.length < 12) { setError('Use at least 12 characters.'); return; }
+    if (password.length < 6) { setError('Use at least 6 characters.'); return; }
     if (password !== confirm) { setError('The passwords do not match.'); return; }
     setBusy(true); setError('');
     try { await savePassword(password); setPassword(''); setConfirm(''); setSaved(true); }
@@ -27,7 +27,7 @@ export default function PasswordScreen() {
   return <KeyboardAvoidingView style={styles.page} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingTop: insets.top + 28 }]}>
     <Text style={styles.title}>{saved ? 'Password saved' : 'Choose your password'}</Text>
     {session && !saved ? <>
-      <Text style={styles.body}>Set a password for {session.user.email}. Use at least 12 characters.</Text>
+      <Text style={styles.body}>Set a password for {session.user.email}. Use at least 6 characters.</Text>
       <Text style={styles.body}>New password</Text><TextInput style={styles.input} accessibilityLabel="New password" secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="new-password" value={password} onChangeText={setPassword} editable={!busy} />
       <Text style={styles.body}>Confirm password</Text><TextInput style={styles.input} accessibilityLabel="Confirm password" secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="new-password" value={confirm} onChangeText={setConfirm} editable={!busy} />
       <GoldButton title="Save password" loading={busy} onPress={() => { void submit(); }} />
