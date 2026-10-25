@@ -37,6 +37,7 @@ jobs:
           npm run test:bible-reader
           npm run test:journey-rewards
           npm run test:auth-callback
+          npm run test:auth-methods
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
@@ -60,7 +61,7 @@ jobs:
           const data = JSON.parse(fs.readFileSync('/tmp/ios-build.json', 'utf8'));
           const b = Array.isArray(data) ? data[0] : data;
           if (!b.id) throw new Error('Missing EAS build ID');
-          fs.writeFileSync('apple-build-info.json', JSON.stringify({id:b.id,version:'0.9.0',build:'7',sourceCommit:process.env.GITHUB_SHA},null,2));
+          fs.writeFileSync('apple-build-info.json', JSON.stringify({id:b.id,version:'0.9.1',build:'8',sourceCommit:process.env.GITHUB_SHA},null,2));
           console.log('EAS build:', b.id);
           NODE
       - name: Save Apple build reference
@@ -76,7 +77,7 @@ jobs:
         with:
           name: try-jesus-the-journey-apple-ipa
           path: |
-            Try-Jesus-Journey-v0.9.0-build7.ipa
+            Try-Jesus-Journey-v0.9.1-build8.ipa
             apple-build-info.json
           if-no-files-found: error
           retention-days: 14
@@ -91,7 +92,7 @@ jobs:
           name: try-jesus-the-journey-apple-ipa
       - name: Verify App Store package
         run: |
-          unzip -q Try-Jesus-Journey-v0.9.0-build7.ipa -d inspected
+          unzip -q Try-Jesus-Journey-v0.9.1-build8.ipa -d inspected
           APP=$(find inspected/Payload -maxdepth 1 -name '*.app' -type d -print -quit)
           test -n "$APP"
           codesign --verify --deep --strict --verbose=2 "$APP"
@@ -102,15 +103,16 @@ jobs:
           info=plistlib.loads((app/'Info.plist').read_bytes())
           profile=plistlib.loads(pathlib.Path('profile.plist').read_bytes())
           assert info['CFBundleIdentifier']=='com.tryjesusmedia.journey'
-          assert info['CFBundleShortVersionString']=='0.9.0'
-          assert info['CFBundleVersion']=='7'
+          assert info['CFBundleShortVersionString']=='0.9.1'
+          assert info['CFBundleVersion']=='8'
           assert profile['ExpirationDate']>datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
           assert not profile.get('ProvisionedDevices')
           assert not profile.get('ProvisionsAllDevices',False)
           assert not profile['Entitlements'].get('get-task-allow',False)
           assert profile['Entitlements']['application-identifier'].endswith('.com.tryjesusmedia.journey')
+          assert profile['Entitlements'].get('com.apple.developer.applesignin') == ['Default'], 'Signing profile must enable Sign in with Apple'
           bundle=(app/'main.jsbundle').read_bytes()
           assert b'chronological-bible-doc-v5' in bundle
           assert b'get_chronbible_doc_leaderboard' in bundle
-          print('Verified App Store distribution, signature, version 0.9.0 (7), and document plan.')
+          print('Verified App Store distribution, signature, version 0.9.1 (8), and document plan.')
           PY

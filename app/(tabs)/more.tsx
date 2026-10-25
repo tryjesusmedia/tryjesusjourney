@@ -54,7 +54,7 @@ export default function MoreScreen() {
   function confirmDeletion() {
     Alert.alert(
       'Delete your account and data?',
-      'First, the latest Chron Bible progress will be saved on this phone. Then this permanently deletes the Google-linked sync account and its online data. The local copy will remain, but the deleted sync account cannot be restored. This cannot be undone.',
+      'First, the latest Chron Bible progress will be saved on this phone. Then this permanently deletes the sync account and its online data. The local copy will remain, but the deleted sync account cannot be restored. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -62,7 +62,7 @@ export default function MoreScreen() {
           style: 'destructive',
           onPress: () => Alert.alert(
             'Final confirmation',
-            'Delete your Google-linked Try Jesus sync account and all associated online data permanently?',
+            'Delete your Try Jesus sync account and all associated online data permanently?',
             [
               { text: 'Keep my account', style: 'cancel' },
               { text: 'Delete permanently', style: 'destructive', onPress: deleteAccount },
@@ -104,6 +104,7 @@ export default function MoreScreen() {
       <Text style={styles.accountTitle}>Account &amp; help</Text><Text style={styles.chevron}>{accountOpen ? '−' : '+'}</Text>
     </Pressable>
     {accountOpen ? <Card style={styles.accountCard}>
+      <OutlineButton title={session ? "Manage sign-in methods" : "Sign in or create an account"} onPress={() => router.push('/login')} />
       <OutlineButton title="Email Try Jesus Media" onPress={() => openLink('mailto:info@tryjesusmedia.com')} />
       <OutlineButton title="Privacy policy" onPress={() => openLink(PRIVACY_URL)} />
       {session ? <><Text style={styles.deletionNote}>Delete your online sync account and its data. A copy of your ChronBible progress will stay on this phone.</Text><OutlineButton title={deleting ? 'Saving copy and deleting…' : 'Delete sync account and online data'} disabled={deleting} onPress={confirmDeletion} /></> : null}

@@ -7,12 +7,12 @@ while (Date.now() < deadline) {
   console.log(`Apple build ${info.id}: ${build.status}`);
   if (['ERRORED','CANCELED'].includes(build.status)) throw new Error(`Apple build ${build.status}: ${build.error?.message || 'See EAS build logs'}`);
   if (build.status === 'FINISHED') {
-    if (build.platform !== 'IOS' || build.distribution !== 'STORE' || build.appVersion !== '0.9.0' || build.appBuildVersion !== '7') throw new Error('Unexpected Apple release metadata');
+    if (build.platform !== 'IOS' || build.distribution !== 'STORE' || build.appVersion !== '0.9.1' || build.appBuildVersion !== '8') throw new Error('Unexpected Apple release metadata');
     const url = build.artifacts?.buildUrl || build.artifacts?.applicationArchiveUrl;
     if (!url || new URL(url).protocol !== 'https:') throw new Error('Missing secure IPA download');
     const response = await fetch(url);
     if (!response.ok) throw new Error(`IPA download failed: ${response.status}`);
-    writeFileSync('Try-Jesus-Journey-v0.9.0-build7.ipa', Buffer.from(await response.arrayBuffer()));
+    writeFileSync('Try-Jesus-Journey-v0.9.1-build8.ipa', Buffer.from(await response.arrayBuffer()));
     writeFileSync('apple-build-info.json', JSON.stringify({...info,status:build.status,distribution:build.distribution,completedAt:build.completedAt},null,2));
     process.exit(0);
   }

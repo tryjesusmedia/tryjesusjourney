@@ -48,3 +48,10 @@ export function createAuthCallbackHandler(auth: AuthClient) {
     return true;
   };
 }
+
+export function authCallbackDestination(url: string): '/auth/password' | '/(tabs)/bible' {
+  const parsed = new URL(url);
+  const hash = new URLSearchParams(parsed.hash.slice(1));
+  return parsed.searchParams.get('next') === 'recovery' || parsed.searchParams.get('type') === 'recovery' || hash.get('type') === 'recovery'
+    ? '/auth/password' : '/(tabs)/bible';
+}
